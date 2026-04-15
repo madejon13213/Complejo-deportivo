@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  /* Definición de la Paleta Deportiva */
+  --color-azul-pro: #0052FF;
+  --color-lima-neon: #CCFF00;
+  --color-carbon: #1A1A1B;
+  --color-nieve: #F8F9FA;
+  --color-acero: #E2E8F0;
+
+  /* Enlace con las variables de Google Fonts del Layout */
+  --font-titles: var(--font-titles);
+  --font-body: var(--font-body);
+}
+
+:root {
+  background-color: var(--color-nieve);
+  color: var(--color-carbon);
+}
+
+/* Estilo global para títulos del TFG */
+h1, h2, h3, h4 {
+  font-family: var(--font-titles);
+  text-transform: uppercase;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}

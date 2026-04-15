@@ -1,0 +1,22 @@
+fastapi
+uvicorn[standard]
+
+# Base de datos
+sqlalchemy
+psycopg2-binary
+
+# Seguridad
+passlib[bcrypt]
+pyjwt
+email-validator
+
+# Configuración
+python-dotenv
+# Cache
+redis
+# PDF
+weasyprint
+# Opcional pero recomendado
+jinja2
+pandas
+xlsxwriter
