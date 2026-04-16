@@ -62,7 +62,6 @@ class UserService:
 
         rol_nombre = usuario.rol_rel.rol.lower() if usuario.rol_rel else "cliente"
 
-        # Generar tokens
         access_token = AuthManager.create_access_token({
             "id": usuario.id, 
             "name": usuario.nombre, 
@@ -70,7 +69,6 @@ class UserService:
         })
         refresh_token = AuthManager.create_refresh_token(usuario.id)
 
-        # Configurar cookies
         AuthManager._set_auth_cookies(response, access_token, refresh_token)
 
         return {
@@ -82,10 +80,61 @@ class UserService:
             "mensaje": "Inicio de sesión exitoso"
         }
 
+    
     @staticmethod
     def get_all_users(db: Session):
-        # Traemos todos los registros de la tabla Usuario
-        users = db.query(Usuario).all()
-        if not users:
-            return []
-        return users
+        try:
+            return db.query(Usuario).all()
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al intentar recuperar la lista de usuarios de la base de datos"
+            )
+
+    @staticmethod
+    def get_user(user_id: int, db: Session):
+        try:
+            usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+            
+            if not usuario:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Usuario con ID {user_id} no encontrado"
+                )
+            
+            return usuario
+
+        except HTTPException as http_exc:
+            raise http_exc
+            
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ocurrió un error interno al intentar recuperar el usuario"
+            )
+
+    @staticmethod
+    def delete_user(user_id: int, db: Session):
+        try:
+            usuario = db.query(Usuario).filter(Usuario.id == user_id).first()
+            
+            if not usuario:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Usuario con ID {user_id} no encontrado"
+                )
+            
+            db.delete(usuario)
+            db.commit()
+            return {
+                "mensaje": f"Usuario con ID {user_id} eliminado exitosamente"
+            }
+        except HTTPException as http_exc:
+            raise http_exc
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ocurrió un error interno al intentar eliminar el usuario"
+            )
+        

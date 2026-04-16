@@ -19,7 +19,7 @@ redis_client = redis.Redis(
 class AuthManager:
     SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura")
     ALGORITHM = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES = 5
+    ACCESS_TOKEN_EXPIRE_MINUTES = 15
     REFRESH_TOKEN_EXPIRE_DAYS = 30
     
     cookie_scheme = APIKeyCookie(name="token", auto_error=False)

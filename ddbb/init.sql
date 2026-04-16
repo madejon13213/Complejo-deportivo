@@ -66,8 +66,8 @@ ON CONFLICT (id) DO NOTHING;
 -- La contraseña es la que me pasaste: $2b$12$Bvg1q/2nbsT3Qq9d2TEiP.FOg3PH6hRflYTriRtO9uInNTHILLAX2
 INSERT INTO usuario (nombre, pri_ape, seg_ape, email, contraseña, telefono, id_rol) 
 VALUES 
-('Admin', 'Sistema', 'Principal', 'admin@ejemplo.com', '$2b$12$Bvg1q/2nbsT3Qq9d2TEiP.FOg3PH6hRflYTriRtO9uInNTHILLAX2', '600111222', 1),
-('Juan', 'Pérez', 'García', 'juan.perez@email.com', '$2b$12$Bvg1q/2nbsT3Qq9d2TEiP.FOg3PH6hRflYTriRtO9uInNTHILLAX2', '600333444', 2)
+('Admin', 'Sistema', 'Principal', 'admin@ejemplo.com', '$2b$12$/RDWFcVoQzx4NA2I9Q/3Y.der0QDXT6.EZvgVkdQ6FVr07KIWTawC', '600111222', 1),
+('Juan', 'Pérez', 'García', 'juan.perez@email.com', '$2b$12$/RDWFcVoQzx4NA2I9Q/3Y.der0QDXT6.EZvgVkdQ6FVr07KIWTawC', '600333444', 2)
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. TIPOS DE ESPACIO

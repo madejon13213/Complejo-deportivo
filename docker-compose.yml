@@ -3,7 +3,7 @@ version: "3.9"
 services:
   db:
     image: postgres:16
-    container_name: postgres
+    container_name: postgres_db
     restart: always
     env_file:
       - .env
@@ -15,14 +15,14 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: redis_cache
     restart: always
     ports:
       - "6379:6379"
 
   backend:
     build: ./backend
-    container_name: backend
+    container_name: backend_api
     depends_on:
       - db
       - redis
@@ -43,10 +43,10 @@ services:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir /app
 
-  frontend:   # 👈 DEBE ESTAR AQUÍ (alineado con backend, db, redis)
+  frontend:
     build:
       context: ./frontend
-    container_name: frontend
+    container_name: frontend_app
     depends_on:
       - backend
     ports:
@@ -58,12 +58,11 @@ services:
     env_file:
       - .env
     environment:
-      - NODE_ENV=development
-      - WATCHPACK_POLLING=true
-      - CHOKIDAR_USEPOLLING=true
-      - NEXT_PUBLIC_API_URL=/api
-      - INTERNAL_API_URL=http://backend:8000
-
+      NODE_ENV: development
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      BACKEND_INTERNAL_URL: http://backend:8000
     command: npx next dev --webpack
 
 volumes:

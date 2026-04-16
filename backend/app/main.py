@@ -1,14 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import user_router
+from app.routes import user_router, spaces_router, reservation_router, court_router, penalty_router
 from app.database import engine, Base
-# from app.routes.profiles import data_routes, export_routes
-# from app.routes.xperience import xperience_routes
-# from app.routes.xperience import costes_routes
-# from app.routes.services.facilities_routes import router as facilities_router
-# from app.routes.services.configuration_routes import router as configuration_router
-# from app.routes.services import profile_routes, service_routes
-
 app = FastAPI()
 
 origins = [
@@ -24,8 +17,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rutas
 app.include_router(user_router.router)
+app.include_router(spaces_router.router)
+app.include_router(reservation_router.router)
+app.include_router(court_router.router)
+app.include_router(penalty_router.router)
 
 Base.metadata.create_all(bind=engine)
 
