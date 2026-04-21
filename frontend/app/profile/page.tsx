@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { AlertTriangle, Calendar, Clock, LogOut, Trophy } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, LogOut, Settings, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Button from "@/app/components/UI/Button";
 import ChangePasswordModal from "@/app/components/Modals/ChangePasswordModal";
@@ -31,7 +31,7 @@ export default function ProfilePage() {
       </section>
 
       <section className="flex flex-wrap gap-2">
-        <Button variant="secondary" onClick={() => setOpenPassword(true)}>Cambiar contraseña</Button>
+        <Button variant="secondary" icon={<Settings size={16} />} onClick={() => setOpenPassword(true)}>Cambiar contraseña</Button>
         <Button variant="secondary">Descargar datos</Button>
         <Button variant="danger">Eliminar cuenta</Button>
         <Button icon={<LogOut size={16} />} onClick={logout}>Cerrar sesión</Button>
