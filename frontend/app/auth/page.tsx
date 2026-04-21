@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, UserPlus } from "lucide-react";
 import LoginForm from "@/app/components/Forms/LoginForm";
 import RegisterForm from "@/app/components/Forms/RegisterForm";
 
 export default function AuthPage() {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<"login" | "register">("login");
+
+  useEffect(() => {
+    const queryTab = searchParams.get("tab");
+    if (queryTab === "register") setTab("register");
+    if (queryTab === "login") setTab("login");
+  }, [searchParams]);
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-carbon px-4 py-10">
