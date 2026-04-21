@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
-import { Montserrat, Inter } from "next/font/google";
+import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
-import Header from "./components/header";
-import Footer from "./components/footer";
+import Header from "@/app/components/Layout/Header";
+import Footer from "@/app/components/Layout/Footer";
 import { AuthProvider } from "@/context/AuthContext";
 
-// Configuración de Montserrat (Títulos)
 const montserrat = Montserrat({
   variable: "--font-titles",
   subsets: ["latin"],
   weight: ["700", "900"],
 });
 
-// Configuración de Inter (Cuerpo)
 const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
@@ -20,26 +18,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TFG | Complejo Deportivo",
-  description: "Gestión avanzada de instalaciones deportivas",
+  title: "Complejo Deportivo",
+  description: "Sistema de gestión y reservas deportivas",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
-      <body
-        className={`${montserrat.variable} ${inter.variable} font-body antialiased min-h-screen flex flex-col bg-nieve text-carbon`}
-      >
+      <body className={`${montserrat.variable} ${inter.variable} min-h-screen bg-nieve text-carbon antialiased`}>
         <AuthProvider>
-          <Header />
-          <main className="flex-1">
-            {children}
-          </main>
-          <Footer />
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
         </AuthProvider>
       </body>
     </html>
