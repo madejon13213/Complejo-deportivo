@@ -18,3 +18,26 @@ class ReservationResponse(BaseModel):
     id_espacio: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class ReservationCreate(BaseModel):
+    fecha: date
+    hora_inicio: time
+    hora_fin: time
+    plazas_parciales: Optional[int] = None
+    tipo_reserva: str
+    id_user: int
+    id_espacio: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class ReservationUpdate(BaseModel):
+    fecha: Optional[date] = None
+    hora_inicio: Optional[time] = None
+    hora_fin: Optional[time] = None
+    estado: Optional[str] = None
+    plazas_parciales: Optional[int] = None
+    tipo_reserva: Optional[str] = None
+    id_user: Optional[int] = None
+    id_espacio: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)

@@ -14,3 +14,21 @@ class CourtResponse(BaseModel):
     permite_reserva_parcial: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class CourtCreate(BaseModel):
+    nombre: str
+    precio_hora: float
+    capacidad: int
+    precio_hora_parcial: Optional[float] = None
+    id_tipo_espacio: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+class CourtUpdate(BaseModel):
+    nombre: Optional[str] = None
+    precio_hora: Optional[float] = None
+    capacidad: Optional[int] = None
+    precio_hora_parcial: Optional[float] = None
+    id_tipo_espacio: Optional[int] = None
+
+    model_config = ConfigDict(from_attributes=True)
