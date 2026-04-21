@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
 import { AlertTriangle, Calendar, Clock, LogOut, Trophy } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Button from "@/app/components/UI/Button";
@@ -42,7 +42,7 @@ export default function ProfilePage() {
   );
 }
 
-function Card({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function Card({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <article className="rounded-2xl border border-acero bg-white p-4">
       <div className="mb-2 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{icon}</div>
