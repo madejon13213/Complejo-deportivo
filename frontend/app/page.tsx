@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import Link from "next/link";
 import { Zap, Calendar, MapPin, Trophy, Users } from "lucide-react";
 
@@ -42,7 +43,7 @@ export default function HomePage() {
   );
 }
 
-function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+function Feature({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
     <article className="rounded-2xl border border-acero bg-white p-5 shadow-sm">
       <div className="mb-2 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{icon}</div>
