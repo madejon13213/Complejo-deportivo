@@ -3,181 +3,109 @@ import * as jose from "jose";
 
 const ROLE_PERMISSIONS = {
   "/getAllUsers": ["administrador"],
+  "/dashboard": ["cliente", "administrador"],
+  "/reservations": ["cliente", "administrador"],
+  "/reservations/create": ["cliente", "administrador"],
+  "/reservations/my": ["cliente", "administrador"],
+  "/courts": ["cliente", "administrador"],
+  "/spaces": ["cliente", "administrador"],
+  "/profile": ["cliente", "administrador"],
+  "/penalties": ["cliente", "administrador"],
 };
+
+const PUBLIC_ROUTES = ["/", "/auth", "/login", "/register"];
+
+function isPublicRoute(pathname) {
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+function getProtectedPath(pathname) {
+  return Object.keys(ROLE_PERMISSIONS)
+    .sort((a, b) => b.length - a.length)
+    .find((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+async function tryRefresh(request) {
+  const backendUrl = process.env.INTERNAL_API_URL || "http://backend:8000";
+  const cookieHeader = request.headers.get("cookie") || "";
+
+  const refreshRes = await fetch(`${backendUrl}/users/refresh`, {
+    method: "POST",
+    headers: {
+      Cookie: cookieHeader,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!refreshRes.ok) return null;
+
+  const data = await refreshRes.json();
+  return data.newToken || null;
+}
 
 export async function middleware(request) {
   const { pathname } = request.nextUrl;
-
-  let response = NextResponse.next();
-
-  const protectedPath = Object.keys(ROLE_PERMISSIONS)
-    .sort((a, b) => b.length - a.length)
-    .find(
-      (path) => pathname === path || pathname.startsWith(path + "/")
-    );
-
+  const protectedPath = getProtectedPath(pathname);
   const token = request.cookies.get("token")?.value;
-  const refreshToken = request.cookies.get("refresh_token")?.value;
 
- 
   if (!token) {
-    if (protectedPath) {
+    if (!isPublicRoute(pathname)) {
       return NextResponse.redirect(new URL("/auth", request.url));
     }
-    return response;
+    return NextResponse.next();
   }
 
-  try {
-  
-    const secret = new TextEncoder().encode(
-      process.env.SECRET_KEY || "tu_clave_secreta"
-    );
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY || "tu_clave_secreta");
 
+  try {
     const { payload } = await jose.jwtVerify(token, secret);
 
-    const ahora = Math.floor(Date.now() / 1000);
-    const exp = payload.exp || 0;
-    const tiempoRestante = exp - ahora;
-
-  
-    if (tiempoRestante > 0 && tiempoRestante < 180) {
-      console.log("🔄 Renovando token...");
-
-      const backendUrl =
-        process.env.INTERNAL_API_URL || "http://backend:8000";
-
-      try {
-        const cookieHeader = request.headers.get("cookie") || "";
-
-        const refreshRes = await fetch(`${backendUrl}/users/refresh`, {
-          method: "POST",
-          headers: {
-            Cookie: cookieHeader,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-
-          if (data.newToken) {
-            // 🔁 Actualizar request
-            const requestHeaders = new Headers(request.headers);
-            const updatedCookies = cookieHeader.replace(
-              /token=[^;]+/,
-              `token=${data.newToken}`
-            );
-
-            requestHeaders.set("cookie", updatedCookies);
-
-            response = NextResponse.next({
-              request: { headers: requestHeaders },
-            });
-
-            // 🍪 Actualizar cookie
-            response.cookies.set("token", data.newToken, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              path: "/",
-              maxAge: 15 * 60,
-            });
-
-            console.log("✅ Token renovado correctamente");
-          }
-        } else if (refreshRes.status === 401) {
-          console.warn("⚠️ Refresh inválido");
-
-          response.cookies.delete("token");
-          response.cookies.delete("refresh_token");
-
-          return NextResponse.redirect(new URL("/auth", request.url));
-        }
-      } catch (err) {
-        console.error("❌ Error en refresh:", err.message);
-      }
-    }
-
-    // 🔐 CONTROL DE ROLES
     if (protectedPath) {
-      const userRole = (payload.rol || "")
-        .toLowerCase()
-        .trim();
-
-      const allowedRoles = ROLE_PERMISSIONS[protectedPath];
-
-      if (!allowedRoles.includes(userRole)) {
-        console.warn("⛔ Acceso denegado:", userRole);
-        return NextResponse.redirect(new URL("/auth", request.url));
+      const role = (payload.rol || "").toLowerCase().trim();
+      const allowed = ROLE_PERMISSIONS[protectedPath] || [];
+      if (!allowed.includes(role)) {
+        return NextResponse.redirect(new URL("/dashboard?error=403", request.url));
       }
     }
 
+    return NextResponse.next();
+  } catch {
+    const newToken = await tryRefresh(request).catch(() => null);
+    if (!newToken) {
+      const response = NextResponse.redirect(new URL("/auth", request.url));
+      response.cookies.delete("token");
+      response.cookies.delete("refresh_token");
+      return response;
+    }
+
+    const requestHeaders = new Headers(request.headers);
+    const cookieHeader = request.headers.get("cookie") || "";
+    const updatedCookies = cookieHeader.includes("token=")
+      ? cookieHeader.replace(/token=[^;]+/, `token=${newToken}`)
+      : `${cookieHeader}; token=${newToken}`;
+
+    requestHeaders.set("cookie", updatedCookies);
+
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.cookies.set("token", newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 15 * 60,
+    });
     return response;
-  } catch (error) {
-    console.error("❌ Token inválido o expirado:", error.message);
-
-    if (refreshToken) {
-      try {
-        const backendUrl =
-          process.env.INTERNAL_API_URL || "http://backend:8000";
-
-        const cookieHeader = request.headers.get("cookie") || "";
-
-        const refreshRes = await fetch(`${backendUrl}/users/refresh`, {
-          method: "POST",
-          headers: {
-            Cookie: cookieHeader,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (refreshRes.ok) {
-          const data = await refreshRes.json();
-
-          if (data.newToken) {
-            const requestHeaders = new Headers(request.headers);
-            const updatedCookies = cookieHeader.replace(
-              /token=[^;]+/,
-              `token=${data.newToken}`
-            );
-
-            requestHeaders.set("cookie", updatedCookies);
-
-            const newResponse = NextResponse.next({
-              request: { headers: requestHeaders },
-            });
-
-            newResponse.cookies.set("token", data.newToken, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              path: "/",
-              maxAge: 15 * 60,
-            });
-
-            console.log("🩹 Sesión recuperada");
-
-            return newResponse;
-          }
-        }
-      } catch (err) {
-        console.error("❌ Falló el rescate:", err.message);
-      }
-    }
-
-    const errorResponse = NextResponse.redirect(
-      new URL("/auth", request.url)
-    );
-    errorResponse.cookies.delete("token");
-    errorResponse.cookies.delete("refresh_token");
-
-    return errorResponse;
   }
 }
 
 export const config = {
   matcher: [
+    "/dashboard/:path*",
+    "/reservations/:path*",
+    "/courts/:path*",
+    "/spaces/:path*",
+    "/profile/:path*",
+    "/penalties/:path*",
     "/getAllUsers/:path*",
-
   ],
 };
