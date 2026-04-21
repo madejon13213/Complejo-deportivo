@@ -1,125 +1,65 @@
 import Link from "next/link";
-import { Zap, CalendarCheck, Award, MapPin, Star } from "lucide-react";
+import { Zap, Calendar, MapPin, Trophy, Users } from "lucide-react";
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col w-full">
-      {/* 1. HERO SECTION - Impacto Visual */}
-      <section className="relative bg-carbon text-nieve py-24 md:py-32 px-6 overflow-hidden">
-        {/* Decoración de fondo (opcional, simula movimiento) */}
-        <div className="absolute inset-0 opacity-10">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="polka" x="0" y="0" width="100" height="100" patternUnits="userSpaceOnUse">
-                <circle fill="#eee" cx="25" cy="25" r="3"></circle>
-              </pattern>
-            </defs>
-            <rect x="0" y="0" width="100%" height="100%" fill="url(#polka)"></rect>
-          </svg>
-        </div>
-
-        <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center z-10">
-          <div className="flex items-center gap-2 bg-azul-pro/20 text-azul-pro px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-6 border border-azul-pro/30">
-            <Zap className="w-4 h-4" />
-            <span>El nuevo estándar deportivo</span>
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl lg:text-8xl leading-none mb-6 tracking-tighter">
-            ENTRENA. <br />
-            <span className="text-lima-neon">RESERVA.</span> <br />
-            GANA.
-          </h1>
-          
-          <p className="font-body text-lg md:text-xl text-gray-300 max-w-2xl mb-12 leading-relaxed">
-            Bienvenido a <span className="font-bold text-nieve">TFG Complejo Deportivo</span>, la plataforma digital más avanzada para gestionar tus entrenamientos, reservar pistas y alcanzar tus metas.
+    <div className="w-full">
+      <section className="bg-carbon px-4 py-20 text-nieve">
+        <div className="mx-auto max-w-7xl text-center">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-azul-pro/20 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-lima-neon">
+            <Zap size={14} /> Plataforma deportiva
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 w-full sm:w-auto">
-            <Link href="/register" className="bg-azul-pro text-nieve font-titles px-12 py-4 rounded-xl text-lg hover:bg-white hover:text-carbon transition-all shadow-lg text-center uppercase tracking-tight">
-              Únete al Club
-            </Link>
-            <Link href="/login" className="bg-transparent border-2 border-nieve/30 text-nieve font-titles px-12 py-4 rounded-xl text-lg hover:border-lima-neon hover:text-lima-neon transition-all text-center uppercase tracking-tight">
-              Iniciar Sesión
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 2. FEATURES SECTION - Beneficios */}
-      <section className="py-20 px-6 bg-nieve">
-        <div className="max-w-7xl mx-auto space-y-16">
-          <div className="text-center max-w-xl mx-auto">
-            <p className="text-azul-pro font-titles text-sm tracking-widest uppercase mb-2">¿Por qué nosotros?</p>
-            <h2 className="text-4xl md:text-5xl">Tu rendimiento, nuestra prioridad</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <FeatureCard 
-              icon={<CalendarCheck />} 
-              title="Reservas Inteligentes" 
-              description="Gestiona tus pistas de pádel, tenis o fútbol en segundos desde cualquier dispositivo."
-            />
-            <FeatureCard 
-              icon={<Award />} 
-              title="Instalaciones Premium" 
-              description="Accede a equipamiento de última generación y pistas mantenidas profesionalmente."
-            />
-            <FeatureCard 
-              icon={<Zap />} 
-              title="Clases Dirigidas" 
-              description="Inscríbete en Crossfit, Yoga o Natación con los mejores instructores certificados."
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* 3. MÍNIMO TOUR/DEPORTES SECTION */}
-      <section className="py-20 px-6 bg-white border-y border-acero">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <h2 className="text-4xl md:text-5xl leading-tight">Más que un gimnasio, <span className="text-azul-pro">un ecosistema</span>.</h2>
-            <p className="font-body text-gray-600 text-lg leading-relaxed">
-              Nuestras instalaciones están diseñadas para deportistas exigentes. Contamos con tecnología de vanguardia para trackear tu progreso y una comunidad vibrante.
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-4 font-body text-sm text-gray-800">
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-lima-neon"/> 12 Pistas de Pádel</div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-lima-neon"/> Zona Crossfit 500m²</div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-lima-neon"/> Piscina Olímpica</div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-lima-neon"/> Spa & Recuperación</div>
-            </div>
-          </div>
-          <div className="bg-acero h-96 rounded-2xl flex items-center justify-center text-gray-500 font-body shadow-inner border border-acero">
-            [ Espacio para Imagen de la Instalación ]
-          </div>
-        </div>
-      </section>
-
-      {/* 4. ÚLTIMO CTA SECTION */}
-      <section className="py-24 px-6 bg-nieve text-center">
-        <div className="max-w-2xl mx-auto bg-white p-12 rounded-3xl border border-acero shadow-xl space-y-8 hover:border-azul-pro transition-colors">
-          <Star className="w-12 h-12 text-lima-neon mx-auto" />
-          <h2 className="text-4xl">¿Listo para el siguiente nivel?</h2>
-          <p className="font-body text-gray-600 text-lg">
-            Regístrate ahora para acceder a los horarios completos, precios exclusivos y nuestro sistema de reservas en tiempo real.
+          <h1 className="text-5xl">Reserva. Entrena. Compite.</h1>
+          <p className="mx-auto mt-4 max-w-2xl font-body text-gray-300">
+            Complejo Deportivo une reservas inteligentes, comunidad y rendimiento en una sola experiencia.
           </p>
-          <Link href="/register" className="inline-block bg-carbon text-nieve font-titles px-10 py-4 rounded-xl text-lg hover:bg-azul-pro transition-all uppercase tracking-tight">
-            Crear cuenta gratuita
-          </Link>
+          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/auth" className="rounded-xl bg-azul-pro px-6 py-3 font-semibold text-white">Entrar</Link>
+            <Link href="/courts" className="rounded-xl border border-white/30 px-6 py-3 font-semibold">Ver pistas</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-4 px-4 py-12 md:grid-cols-2 lg:grid-cols-5">
+        <Feature icon={<Zap size={18} />} title="Velocidad" text="Reserva en segundos" />
+        <Feature icon={<Calendar size={18} />} title="Calendario" text="Agenda siempre sincronizada" />
+        <Feature icon={<MapPin size={18} />} title="Ubicación" text="Encuentra tu pista ideal" />
+        <Feature icon={<Trophy size={18} />} title="Competencia" text="Sigue tu progreso" />
+        <Feature icon={<Users size={18} />} title="Comunidad" text="Juega con más personas" />
+      </section>
+
+      <section className="border-t border-acero bg-white px-4 py-12">
+        <div className="mx-auto max-w-7xl">
+          <h2 className="text-3xl">Testimonios</h2>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <Testimonial name="Lucía G." text="La reserva es rapidísima y clara." />
+            <Testimonial name="Javier M." text="El dashboard me ayuda a organizar la semana." />
+            <Testimonial name="Sara P." text="Diseño limpio y flujo muy cómodo en móvil." />
+          </div>
         </div>
       </section>
     </div>
   );
 }
 
-// Subcomponente FeatureCard para mantener globals.css limpio de clases repetidas
-function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
+function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <div className="bg-white p-8 rounded-2xl border border-acero shadow-sm hover:shadow-lg transition-all space-y-4 hover:-translate-y-1 hover:border-azul-pro group">
-      <div className="w-12 h-12 bg-nieve rounded-lg flex items-center justify-center text-azul-pro border border-acero group-hover:bg-azul-pro group-hover:text-white transition-colors">
-        {icon}
+    <article className="rounded-2xl border border-acero bg-white p-5 shadow-sm">
+      <div className="mb-2 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{icon}</div>
+      <h3 className="text-lg">{title}</h3>
+      <p className="text-sm text-gray-600">{text}</p>
+    </article>
+  );
+}
+
+function Testimonial({ name, text }: { name: string; text: string }) {
+  return (
+    <article className="rounded-2xl border border-acero bg-nieve p-5">
+      <div className="mb-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-azul-pro text-white">
+        {name.charAt(0)}
       </div>
-      <h3 className="text-xl m-0 text-carbon">{title}</h3>
-      <p className="font-body text-gray-600 text-sm leading-relaxed">{description}</p>
-    </div>
+      <p className="text-sm text-gray-700">{text}</p>
+      <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-gray-500">{name}</p>
+    </article>
   );
 }
