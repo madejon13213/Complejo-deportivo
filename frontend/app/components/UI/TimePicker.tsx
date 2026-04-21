@@ -1,4 +1,6 @@
-interface TimePickerProps extends React.InputHTMLAttributes<HTMLInputElement> {
+import { InputHTMLAttributes } from "react";
+
+interface TimePickerProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
 }
 
