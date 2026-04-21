@@ -1,13 +1,15 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(`${API_BASE}${path}`, {
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
     ...init,
+    credentials: "include",
+    headers,
   });
 
   if (!response.ok) {
