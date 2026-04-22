@@ -43,6 +43,11 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     }
 
     const message = parseErrorMessage(payload);
+
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.location.href = "/login";
+    }
+
     throw new ApiError(message, response.status, payload);
   }
 
