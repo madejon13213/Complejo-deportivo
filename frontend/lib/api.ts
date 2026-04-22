@@ -22,6 +22,10 @@ function parseErrorMessage(payload: unknown): string {
   return "Error de servidor";
 }
 
+function isAuthRoute(pathname: string): boolean {
+  return pathname === "/login" || pathname === "/auth" || pathname === "/register";
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Content-Type") && init?.body) {
@@ -45,7 +49,10 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     const message = parseErrorMessage(payload);
 
     if (response.status === 401 && typeof window !== "undefined") {
-      window.location.href = "/login";
+      const currentPath = window.location.pathname;
+      if (!isAuthRoute(currentPath)) {
+        window.location.assign("/login");
+      }
     }
 
     throw new ApiError(message, response.status, payload);
