@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import PenalizationForm from "@/app/components/Modals/PenalizationForm";
 import DataTable from "@/app/components/Tables/DataTable";
 import Toast from "@/app/components/UI/Toast";
@@ -11,35 +10,32 @@ import { Penalty } from "@/lib/types";
 export default function AdminPenalizacionesPage() {
   const penaltiesQuery = useApiQuery<Penalty[]>(() => getAllPenalties(), []);
 
-  const columns = useMemo(
-    () => [
-      {
-        key: "id",
-        header: "ID",
-        render: (row: Penalty) => row.id,
-        searchable: (row: Penalty) => String(row.id),
-      },
-      {
-        key: "reserva",
-        header: "ID reserva",
-        render: (row: Penalty) => row.id_reserva,
-        searchable: (row: Penalty) => String(row.id_reserva),
-      },
-      {
-        key: "tipo",
-        header: "Tipo",
-        render: (row: Penalty) => row.tipo_penalizacion,
-        searchable: (row: Penalty) => row.tipo_penalizacion,
-      },
-      {
-        key: "rango",
-        header: "Rango",
-        render: (row: Penalty) => `${row.fecha_inicio} - ${row.fecha_fin}`,
-        searchable: (row: Penalty) => `${row.fecha_inicio} ${row.fecha_fin}`,
-      },
-    ],
-    []
-  );
+  const columns = [
+    {
+      key: "id",
+      header: "ID",
+      render: (row: Penalty) => row.id,
+      searchable: (row: Penalty) => String(row.id),
+    },
+    {
+      key: "reserva",
+      header: "ID reserva",
+      render: (row: Penalty) => row.id_reserva,
+      searchable: (row: Penalty) => String(row.id_reserva),
+    },
+    {
+      key: "tipo",
+      header: "Tipo",
+      render: (row: Penalty) => row.tipo_penalizacion,
+      searchable: (row: Penalty) => row.tipo_penalizacion,
+    },
+    {
+      key: "rango",
+      header: "Rango",
+      render: (row: Penalty) => `${row.fecha_inicio} - ${row.fecha_fin}`,
+      searchable: (row: Penalty) => `${row.fecha_inicio} ${row.fecha_fin}`,
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
