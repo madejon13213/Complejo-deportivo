@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LogOut, Menu, User } from "lucide-react";
+import { BarChart3, LogOut, Menu, User, Calendar, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 export default function HeaderLinks() {
   const pathname = usePathname();
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   const links = isAuthenticated
     ? [
         { href: "/dashboard", label: "Dashboard", icon: <BarChart3 size={16} /> },
+        { href: "/reservas", label: "Reservas", icon: <Calendar size={16} /> },
         { href: "/profile", label: "Perfil", icon: <User size={16} /> },
+        ...(isAdmin ? [{ href: "/admin/usuarios", label: "Admin", icon: <Shield size={16} /> }] : []),
       ]
     : [];
 
@@ -32,7 +34,7 @@ export default function HeaderLinks() {
       ))}
 
       {!isAuthenticated && (
-        <Link href="/auth" className="rounded-xl bg-azul-pro px-4 py-2 text-sm font-semibold text-white">
+        <Link href="/login" className="rounded-xl bg-azul-pro px-4 py-2 text-sm font-semibold text-white">
           <span className="inline-flex items-center gap-1">
             <Menu size={16} />
             Acceder
