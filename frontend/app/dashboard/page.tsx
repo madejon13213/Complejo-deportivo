@@ -13,12 +13,13 @@ import { getReservationsByUser } from "@/lib/services/reservations";
 import { Reservation } from "@/lib/types";
 
 export default function DashboardPage() {
-  const { role, userId, isAdmin } = useAuth();
+  const { role, userId, isAdmin, isReady } = useAuth();
   const numericUserId = userId ? Number(userId) : null;
 
   const reservationsQuery = useApiQuery<Reservation[]>(
     () => getReservationsByUser(numericUserId || 0),
-    [numericUserId]
+    [numericUserId],
+    { enabled: isReady && Boolean(numericUserId) }
   );
 
   const reservations = reservationsQuery.data || [];
