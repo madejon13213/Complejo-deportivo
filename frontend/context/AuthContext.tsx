@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation";
 import { apiFetch, ApiError } from "@/lib/api";
 
+const REFRESH_INTERVAL_MS = 13 * 60 * 1000;
+
 interface AuthState {
   userId: string | null;
   role: string | null;
@@ -63,30 +65,75 @@ function parseRole(payload: LoginPayload): AuthState {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const workerRef = useRef<Worker | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const refreshInFlightRef = useRef(false);
+  const isUnmountedRef = useRef(false);
   const [auth, setAuth] = useState<AuthState>(initialState);
+
+  const stopRefreshTimer = useCallback(() => {
+    if (refreshTimerRef.current) {
+      clearInterval(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const clearLocalAuthState = useCallback(() => {
+    setAuth({ ...initialState, isReady: true });
+  }, []);
+
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    if (refreshInFlightRef.current || isUnmountedRef.current) {
+      return false;
+    }
+
+    refreshInFlightRef.current = true;
+
+    try {
+      const refreshResponse = await fetch("/api/users/refresh", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!refreshResponse.ok) {
+        return false;
+      }
+
+      const user = await apiFetch<LoginPayload>("/users/me", { method: "GET", cache: "no-store" });
+      setAuth(parseRole(user));
+      return true;
+    } catch {
+      return false;
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  }, []);
+
+  const performLogout = useCallback(async () => {
+    stopRefreshTimer();
+    try {
+      await fetch("/api/users/logout", { method: "POST", credentials: "include" });
+    } finally {
+      clearLocalAuthState();
+      router.push("/login");
+    }
+  }, [clearLocalAuthState, router, stopRefreshTimer]);
 
   const checkAuth = useCallback(async () => {
     try {
       const user = await apiFetch<LoginPayload>("/users/me", { method: "GET", cache: "no-store" });
       setAuth(parseRole(user));
+      return;
     } catch (error) {
       const apiError = error as ApiError;
       if (apiError?.status === 401) {
-        try {
-          const refreshed = await fetch("/api/users/refresh", { method: "POST", credentials: "include" });
-          if (refreshed.ok) {
-            const user = await apiFetch<LoginPayload>("/users/me", { method: "GET", cache: "no-store" });
-            setAuth(parseRole(user));
-            return;
-          }
-        } catch {
-          // ignore refresh failure
+        const refreshed = await refreshSession();
+        if (refreshed) {
+          return;
         }
       }
-      setAuth({ ...initialState, isReady: true });
+      clearLocalAuthState();
     }
-  }, []);
+  }, [clearLocalAuthState, refreshSession]);
 
   useEffect(() => {
     void checkAuth();
@@ -94,41 +141,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
-      if (workerRef.current) {
-        workerRef.current.postMessage("stop");
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
+      stopRefreshTimer();
       return;
     }
 
-    if (!workerRef.current) {
-      workerRef.current = new Worker("/auth-worker.js");
-      workerRef.current.onmessage = (event: MessageEvent<string>) => {
-        if (event.data === "tick") {
-          void checkAuth();
-        }
-      };
-    }
-    workerRef.current.postMessage("start");
+    stopRefreshTimer();
+    refreshTimerRef.current = setInterval(async () => {
+      const ok = await refreshSession();
+      if (!ok) {
+        await performLogout();
+      }
+    }, REFRESH_INTERVAL_MS);
 
     return () => {
-      if (workerRef.current) workerRef.current.postMessage("stop");
+      stopRefreshTimer();
     };
-  }, [auth.isAuthenticated, checkAuth]);
+  }, [auth.isAuthenticated, performLogout, refreshSession, stopRefreshTimer]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      stopRefreshTimer();
+      // Solo limpiamos estado local en memoria; no invalidamos refresh_token al cerrar pestaña.
+      setAuth((prev) => ({ ...prev, isAuthenticated: false, isReady: true }));
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [stopRefreshTimer]);
+
+  useEffect(() => {
+    return () => {
+      isUnmountedRef.current = true;
+      stopRefreshTimer();
+    };
+  }, [stopRefreshTimer]);
 
   const login = useCallback((payload: LoginPayload) => {
     setAuth(parseRole(payload));
   }, []);
 
   const logout = useCallback(async () => {
-    try {
-      await fetch("/api/users/logout", { method: "POST", credentials: "include" });
-    } finally {
-      setAuth({ ...initialState, isReady: true });
-      router.push("/login");
-    }
-  }, [router]);
+    await performLogout();
+  }, [performLogout]);
 
   const value = useMemo(() => ({ ...auth, login, logout, checkAuth }), [auth, login, logout, checkAuth]);
 
