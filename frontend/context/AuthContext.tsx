@@ -82,8 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
-    if (refreshInFlightRef.current || isUnmountedRef.current) {
+    if (isUnmountedRef.current) {
       return false;
+    }
+
+    if (refreshInFlightRef.current) {
+      return true;
     }
 
     refreshInFlightRef.current = true;
