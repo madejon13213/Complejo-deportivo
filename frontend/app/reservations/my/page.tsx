@@ -1,25 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import ReservationCard from "@/app/components/Cards/ReservationCard";
 import Button from "@/app/components/UI/Button";
+import Spinner from "@/app/components/UI/Spinner";
+import Toast from "@/app/components/UI/Toast";
+import { useAuth } from "@/context/AuthContext";
+import { useApiQuery } from "@/lib/hooks/useApiQuery";
+import { getReservationsByUser } from "@/lib/services/reservations";
 import { Reservation } from "@/lib/types";
 
-const reservations: Reservation[] = [
-  { id: 1, fecha: "2026-04-24", hora_inicio: "18:00", hora_fin: "19:00", estado: "confirmada", courtName: "Pista 1" },
-  { id: 2, fecha: "2026-04-10", hora_inicio: "17:00", hora_fin: "18:00", estado: "completada", courtName: "Pista 4" },
-  { id: 3, fecha: "2026-04-09", hora_inicio: "19:00", hora_fin: "20:00", estado: "cancelada", courtName: "Pista 5" },
-];
-
 export default function MyReservationsPage() {
+  const { userId } = useAuth();
   const [filter, setFilter] = useState<"todas" | "activas" | "pasadas">("todas");
+  const numericUserId = userId ? Number(userId) : null;
 
-  const filtered = reservations.filter((item) => {
-    if (filter === "activas") return item.estado === "confirmada";
-    if (filter === "pasadas") return item.estado === "completada" || item.estado === "cancelada";
-    return true;
-  });
+  const reservationsQuery = useApiQuery<Reservation[]>(
+    () => getReservationsByUser(numericUserId || 0),
+    [numericUserId]
+  );
+
+  const filtered = useMemo(() => {
+    const rows = reservationsQuery.data || [];
+    if (filter === "activas") return rows.filter((item) => item.estado === "confirmada");
+    if (filter === "pasadas") return rows.filter((item) => item.estado !== "confirmada");
+    return rows;
+  }, [filter, reservationsQuery.data]);
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
@@ -33,6 +40,9 @@ export default function MyReservationsPage() {
         <Button variant={filter === "activas" ? "primary" : "secondary"} onClick={() => setFilter("activas")}>Activas</Button>
         <Button variant={filter === "pasadas" ? "primary" : "secondary"} onClick={() => setFilter("pasadas")}>Pasadas</Button>
       </div>
+
+      {reservationsQuery.loading && <Spinner />}
+      {reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
         {filtered.map((reservation) => (
