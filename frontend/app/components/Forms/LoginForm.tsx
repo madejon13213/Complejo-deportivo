@@ -8,14 +8,7 @@ import Spinner from "@/app/components/UI/Spinner";
 import Toast from "@/app/components/UI/Toast";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/lib/api";
-
-interface LoginResponse {
-  success: boolean;
-  id: number;
-  name: string;
-  email: string;
-  rol: string;
-}
+import { getMe } from "@/lib/services/users";
 
 export default function LoginForm() {
   const { login } = useAuth();
@@ -29,14 +22,16 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
     try {
-      const response = await apiFetch<LoginResponse>("/users/login", {
+      await apiFetch("/users/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      login(response);
+
+      const me = await getMe();
+      login(me);
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
+      setError(err instanceof Error ? err.message : "No se pudo iniciar sesion");
     } finally {
       setLoading(false);
     }
@@ -47,7 +42,7 @@ export default function LoginForm() {
       {error && <Toast kind="error" message={error} />}
       <Input label="Email" type="email" icon={<Mail size={16} />} value={email} onChange={(e) => setEmail(e.target.value)} required />
       <Input
-        label="Contraseña"
+        label="Contrasena"
         type="password"
         icon={<Lock size={16} />}
         value={password}
