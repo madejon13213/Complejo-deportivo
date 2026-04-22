@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import * as jose from "jose";
 
 const ROLE_PERMISSIONS = {
-  "/getAllUsers": ["administrador"],
-  "/dashboard": ["cliente", "administrador"],
-  "/reservations": ["cliente", "administrador"],
-  "/reservations/create": ["cliente", "administrador"],
-  "/reservations/my": ["cliente", "administrador"],
-  "/courts": ["cliente", "administrador"],
-  "/spaces": ["cliente", "administrador"],
-  "/profile": ["cliente", "administrador"],
-  "/penalties": ["cliente", "administrador"],
+  "/admin": ["administrador", "admin"],
+  "/dashboard": ["cliente", "club", "administrador", "admin"],
+  "/reservas": ["cliente", "club", "administrador", "admin"],
+  "/reservations": ["cliente", "club", "administrador", "admin"],
+  "/courts": ["cliente", "club", "administrador", "admin"],
+  "/spaces": ["cliente", "club", "administrador", "admin"],
+  "/profile": ["cliente", "club", "administrador", "admin"],
+  "/penalties": ["cliente", "club", "administrador", "admin"],
+  "/getAllUsers": ["administrador", "admin"],
 };
 
 const PUBLIC_ROUTES = ["/", "/auth", "/login", "/register"];
@@ -23,6 +23,14 @@ function getProtectedPath(pathname) {
   return Object.keys(ROLE_PERMISSIONS)
     .sort((a, b) => b.length - a.length)
     .find((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
+function resolveRoleFromPayload(payload) {
+  const value = (payload.rol || payload.role || "").toLowerCase().trim();
+  if (value) return value;
+  if (payload.id_rol === 1) return "administrador";
+  if (payload.id_rol === 3) return "club";
+  return "cliente";
 }
 
 async function tryRefresh(request) {
@@ -50,7 +58,7 @@ export async function middleware(request) {
 
   if (!token) {
     if (!isPublicRoute(pathname)) {
-      return NextResponse.redirect(new URL("/auth", request.url));
+      return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
   }
@@ -61,10 +69,10 @@ export async function middleware(request) {
     const { payload } = await jose.jwtVerify(token, secret);
 
     if (protectedPath) {
-      const role = (payload.rol || "").toLowerCase().trim();
+      const role = resolveRoleFromPayload(payload);
       const allowed = ROLE_PERMISSIONS[protectedPath] || [];
       if (!allowed.includes(role)) {
-        return NextResponse.redirect(new URL("/dashboard?error=403", request.url));
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
 
@@ -72,7 +80,7 @@ export async function middleware(request) {
   } catch {
     const newToken = await tryRefresh(request).catch(() => null);
     if (!newToken) {
-      const response = NextResponse.redirect(new URL("/auth", request.url));
+      const response = NextResponse.redirect(new URL("/login", request.url));
       response.cookies.delete("token");
       response.cookies.delete("refresh_token");
       return response;
@@ -101,11 +109,13 @@ export async function middleware(request) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/reservas/:path*",
     "/reservations/:path*",
     "/courts/:path*",
     "/spaces/:path*",
     "/profile/:path*",
     "/penalties/:path*",
     "/getAllUsers/:path*",
+    "/admin/:path*",
   ],
 };
