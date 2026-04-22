@@ -1,8 +1,30 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
+export class ApiError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.details = details;
+  }
+}
+
+function parseErrorMessage(payload: unknown): string {
+  if (!payload || typeof payload !== "object") return "Error de servidor";
+
+  const candidate = payload as { detail?: unknown; error?: unknown; message?: unknown };
+  if (typeof candidate.detail === "string") return candidate.detail;
+  if (typeof candidate.error === "string") return candidate.error;
+  if (typeof candidate.message === "string") return candidate.message;
+  return "Error de servidor";
+}
+
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
-  if (!headers.has("Content-Type")) {
+  if (!headers.has("Content-Type") && init?.body) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -13,14 +35,19 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   });
 
   if (!response.ok) {
-    let message = "Error de servidor";
+    let payload: unknown;
     try {
-      const payload = await response.json();
-      message = payload.detail || payload.error || message;
+      payload = await response.json();
     } catch {
-      // keep default message
+      payload = undefined;
     }
-    throw new Error(message);
+
+    const message = parseErrorMessage(payload);
+    throw new ApiError(message, response.status, payload);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
