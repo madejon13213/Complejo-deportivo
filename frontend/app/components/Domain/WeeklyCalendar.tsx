@@ -8,17 +8,37 @@ interface WeeklyCalendarProps {
   reservations: Reservation[];
   role: string | null;
   userId: number | null;
+  courtCapacity?: number;
+  allowsPartial?: boolean;
   onSelectionChange?: (range: CalendarRange | null) => void;
   weekBaseDate?: Date;
+}
+
+interface SlotState {
+  reservations: Reservation[];
+  occupiedUnits: number;
+  isFull: boolean;
+  isPartial: boolean;
+  hasOwnReservation: boolean;
 }
 
 function toHour(value: string): number {
   return Number(value.slice(0, 2));
 }
 
-export default function WeeklyCalendar({ reservations, role, userId, onSelectionChange, weekBaseDate = new Date() }: WeeklyCalendarProps) {
+export default function WeeklyCalendar({
+  reservations,
+  role,
+  userId,
+  courtCapacity,
+  allowsPartial,
+  onSelectionChange,
+  weekBaseDate = new Date(),
+}: WeeklyCalendarProps) {
   const days = useMemo(() => getWeekDays(weekBaseDate), [weekBaseDate]);
   const hours = useMemo(() => getHoursRange(), []);
+  const capacity = Math.max(1, courtCapacity || 1);
+  const partialEnabled = Boolean(allowsPartial);
 
   const [anchor, setAnchor] = useState<{ date: string; hour: number } | null>(null);
   const [selected, setSelected] = useState<CalendarRange | null>(null);
@@ -33,13 +53,29 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
     }, {});
   }, [reservations]);
 
-  const getReservationAt = (dateIso: string, hour: number) => {
-    const rows = reservationsByDay[dateIso] || [];
-    return rows.find((reservation) => {
+  const getSlotState = (dateIso: string, hour: number): SlotState => {
+    const rows = (reservationsByDay[dateIso] || []).filter((reservation) => {
       const start = toHour(reservation.hora_inicio);
       const end = toHour(reservation.hora_fin);
       return hour >= start && hour < end && reservation.estado !== "cancelada";
     });
+
+    const occupiedUnits = rows.reduce((sum, reservation) => {
+      if (reservation.tipo_reserva === "parcial" && partialEnabled) {
+        return sum + Math.max(1, reservation.plazas_parciales || 1);
+      }
+      return sum + capacity;
+    }, 0);
+
+    const boundedUnits = Math.min(capacity, occupiedUnits);
+
+    return {
+      reservations: rows,
+      occupiedUnits: boundedUnits,
+      isFull: boundedUnits >= capacity,
+      isPartial: partialEnabled && boundedUnits > 0 && boundedUnits < capacity,
+      hasOwnReservation: rows.some((reservation) => reservation.id_user === userId),
+    };
   };
 
   const handleCellClick = (dateIso: string, hour: number) => {
@@ -49,8 +85,8 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
       return;
     }
 
-    const occupied = getReservationAt(dateIso, hour);
-    if (occupied && role !== "club") {
+    const slotState = getSlotState(dateIso, hour);
+    if (slotState.isFull && role !== "club") {
       return;
     }
 
@@ -98,16 +134,43 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
             </div>
             {days.map((day) => {
               const dayIso = toIsoDate(day);
-              const reservation = getReservationAt(dayIso, hour);
+              const slotState = getSlotState(dayIso, hour);
               const past = isPastSlot(dayIso, hour);
               const selectedCell = isSelected(dayIso, hour);
-              const ownReservation = reservation?.id_user === userId;
 
               let cellClass = "bg-green-100 hover:bg-green-200";
-              if (past) cellClass = "bg-gray-200";
-              if (reservation && !ownReservation) cellClass = role === "club" ? "bg-red-200 hover:bg-red-300" : "bg-red-300";
-              if (reservation && ownReservation) cellClass = "bg-blue-200";
-              if (selectedCell) cellClass = "bg-lime-neon";
+              let label = "Libre";
+
+              if (slotState.isPartial) {
+                cellClass = "bg-amber-100 hover:bg-amber-200";
+                label = `${slotState.occupiedUnits}/${capacity}`;
+              }
+
+              if (slotState.isFull) {
+                cellClass = role === "club" ? "bg-red-200 hover:bg-red-300" : "bg-red-300";
+                label = "Ocupado";
+              }
+
+              if (slotState.hasOwnReservation) {
+                cellClass = "bg-blue-200";
+                label = "Tu reserva";
+              }
+
+              if (past) {
+                cellClass = "bg-gray-200";
+                label = "Pasado";
+              }
+
+              if (selectedCell) {
+                cellClass = "bg-lime-neon";
+                label = "Seleccionado";
+              }
+
+              const title = partialEnabled
+                ? `Ocupacion ${slotState.occupiedUnits}/${capacity}`
+                : slotState.isFull
+                ? "Ocupado"
+                : "Disponible";
 
               return (
                 <button
@@ -115,10 +178,10 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
                   type="button"
                   onClick={() => handleCellClick(dayIso, hour)}
                   className={`h-10 rounded-md border border-acero text-[10px] transition ${cellClass}`}
-                  disabled={past || (!!reservation && role !== "club")}
-                  title={reservation ? `Ocupado (${reservation.hora_inicio}-${reservation.hora_fin})` : "Disponible"}
+                  disabled={past || (slotState.isFull && role !== "club")}
+                  title={title}
                 >
-                  {reservation ? "Ocupado" : "Libre"}
+                  {label}
                 </button>
               );
             })}

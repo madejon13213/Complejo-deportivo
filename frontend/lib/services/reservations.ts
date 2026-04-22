@@ -13,6 +13,10 @@ export function getReservationsByUser(userId: number) {
   return apiFetch<Reservation[]>(`/reservations/user/${userId}`, { method: "GET", cache: "no-store" });
 }
 
+export function getReservationsBySpace(spaceId: number) {
+  return apiFetch<Reservation[]>(`/reservations/space/${spaceId}`, { method: "GET", cache: "no-store" });
+}
+
 export function createReservation(payload: ReservationCreatePayload) {
   return apiFetch<Reservation>("/reservations/create", {
     method: "POST",
