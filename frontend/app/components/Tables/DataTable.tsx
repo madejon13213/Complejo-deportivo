@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 
 interface Column<T> {
   key: string;
   header: string;
-  render: (row: T) => React.ReactNode;
+  render: (row: T) => ReactNode;
   searchable?: (row: T) => string;
 }
 
