@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import DataTable from "@/app/components/Tables/DataTable";
 import Button from "@/app/components/UI/Button";
 import Toast from "@/app/components/UI/Toast";
@@ -23,44 +23,41 @@ export default function AdminUsuariosPage() {
     }
   };
 
-  const columns = useMemo(
-    () => [
-      {
-        key: "id",
-        header: "ID",
-        render: (row: User) => row.id,
-        searchable: (row: User) => String(row.id),
-      },
-      {
-        key: "nombre",
-        header: "Nombre",
-        render: (row: User) => `${row.nombre} ${row.pri_ape}`,
-        searchable: (row: User) => `${row.nombre} ${row.pri_ape} ${row.seg_ape || ""}`,
-      },
-      {
-        key: "email",
-        header: "Email",
-        render: (row: User) => row.email,
-        searchable: (row: User) => row.email,
-      },
-      {
-        key: "rol",
-        header: "Rol",
-        render: (row: User) => row.rol || `rol-${row.id_rol || "n/a"}`,
-        searchable: (row: User) => row.rol || String(row.id_rol || ""),
-      },
-      {
-        key: "acciones",
-        header: "Acciones",
-        render: (row: User) => (
-          <Button variant="danger" onClick={() => onDelete(row.id)}>
-            Eliminar
-          </Button>
-        ),
-      },
-    ],
-    []
-  );
+  const columns = [
+    {
+      key: "id",
+      header: "ID",
+      render: (row: User) => row.id,
+      searchable: (row: User) => String(row.id),
+    },
+    {
+      key: "nombre",
+      header: "Nombre",
+      render: (row: User) => `${row.nombre} ${row.pri_ape}`,
+      searchable: (row: User) => `${row.nombre} ${row.pri_ape} ${row.seg_ape || ""}`,
+    },
+    {
+      key: "email",
+      header: "Email",
+      render: (row: User) => row.email,
+      searchable: (row: User) => row.email,
+    },
+    {
+      key: "rol",
+      header: "Rol",
+      render: (row: User) => row.rol || `rol-${row.id_rol || "n/a"}`,
+      searchable: (row: User) => row.rol || String(row.id_rol || ""),
+    },
+    {
+      key: "acciones",
+      header: "Acciones",
+      render: (row: User) => (
+        <Button variant="danger" onClick={() => onDelete(row.id)}>
+          Eliminar
+        </Button>
+      ),
+    },
+  ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
