@@ -17,9 +17,11 @@ function iconFor(name: string) {
 export default function SpaceCard({ space }: SpaceCardProps) {
   return (
     <article className="rounded-2xl border border-acero bg-white p-5 shadow-sm">
-      <div className="mb-3 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{iconFor(space.nombre)}</div>
-      <h3 className="text-xl">{space.nombre}</h3>
-      <p className="mb-4 mt-2 text-sm text-gray-600">{space.descripcion || "Tipo de espacio deportivo."}</p>
+      <div className="mb-3 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{iconFor(space.tipo)}</div>
+      <h3 className="text-xl">{space.tipo}</h3>
+      <p className="mb-4 mt-2 text-sm text-gray-600">
+        {space.permite_reserva_parcial ? "Permite reserva parcial" : "Solo reserva completa"}
+      </p>
       <Link href={`/courts?spaceType=${space.id}`}>
         <Button className="w-full" variant="secondary">
           Ver pistas
