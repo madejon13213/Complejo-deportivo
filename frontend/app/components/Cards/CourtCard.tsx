@@ -16,7 +16,7 @@ export default function CourtCard({ court }: CourtCardProps) {
       <div className="space-y-2">
         <h3 className="text-xl">{court.nombre}</h3>
         <p className="inline-flex items-center gap-1 text-sm text-gray-600">
-          <DollarSign size={14} /> {court.precio ?? 0} €/h
+          <DollarSign size={14} /> {court.precio_hora ?? 0} €/h
         </p>
         <p className="inline-flex items-center gap-1 text-sm text-gray-600">
           <Users size={14} /> Capacidad: {court.capacidad ?? 0}
@@ -31,7 +31,7 @@ export default function CourtCard({ court }: CourtCardProps) {
             Ver detalle
           </Button>
         </Link>
-        <Link href={`/reservations/create?courtId=${court.id}`} className="flex-1">
+        <Link href={`/reservas?courtId=${court.id}`} className="flex-1">
           <Button className="w-full">Reservar</Button>
         </Link>
       </div>
