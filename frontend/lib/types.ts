@@ -21,6 +21,8 @@ export interface Reservation {
   estado: string;
   plazas_parciales?: number | null;
   tipo_reserva: string;
+  courtName?: string;
+  userName?: string;
 }
 
 export interface ReservationCreatePayload {
