@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { CalendarRange, formatLabelDate, getHoursRange, getWeekDays, isPastSlot, toIsoDate } from "@/lib/date";
 import { Reservation } from "@/lib/types";
 
@@ -92,8 +92,8 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
         ))}
 
         {hours.map((hour) => (
-          <>
-            <div key={`label-${hour}`} className="rounded-lg bg-nieve px-2 py-2 text-center font-semibold text-gray-600">
+          <Fragment key={`hour-${hour}`}>
+            <div className="rounded-lg bg-nieve px-2 py-2 text-center font-semibold text-gray-600">
               {String(hour).padStart(2, "0")}:00
             </div>
             {days.map((day) => {
@@ -122,7 +122,7 @@ export default function WeeklyCalendar({ reservations, role, userId, onSelection
                 </button>
               );
             })}
-          </>
+          </Fragment>
         ))}
       </div>
     </section>
