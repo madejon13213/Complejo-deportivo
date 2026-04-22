@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Button from "@/app/components/UI/Button";
 import Select from "@/app/components/UI/Select";
 import Spinner from "@/app/components/UI/Spinner";
@@ -24,6 +25,7 @@ function overlapWithExisting(range: CalendarRange, reservations: Reservation[]) 
 }
 
 export default function ReservasPage() {
+  const searchParams = useSearchParams();
   const { role, userId } = useAuth();
   const numericUserId = userId ? Number(userId) : null;
 
@@ -45,6 +47,13 @@ export default function ReservasPage() {
       })),
     [courtsQuery.data]
   );
+
+  useEffect(() => {
+    const preselectedCourt = searchParams.get("courtId");
+    if (preselectedCourt) {
+      setSelectedCourt(preselectedCourt);
+    }
+  }, [searchParams]);
 
   const selectedRangeConflict = selection ? overlapWithExisting(selection, reservations) : false;
 
