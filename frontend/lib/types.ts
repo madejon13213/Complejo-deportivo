@@ -1,33 +1,46 @@
-export type UserRole = "cliente" | "administrador" | string;
+export type UserRole = "cliente" | "club" | "administrador" | "admin" | string;
 
 export interface User {
   id: number;
   nombre: string;
   pri_ape: string;
-  seg_ape?: string;
+  seg_ape?: string | null;
   email: string;
-  telefono?: string;
+  telefono?: string | null;
   id_rol?: number;
   rol?: UserRole;
 }
 
 export interface Reservation {
   id: number;
-  id_espacio?: number;
-  id_usuario?: number;
+  id_espacio: number;
+  id_user: number;
   fecha: string;
-  hora_inicio?: string;
-  hora_fin?: string;
-  estado?: string;
+  hora_inicio: string;
+  hora_fin: string;
+  estado: string;
+  plazas_parciales?: number | null;
+  tipo_reserva: string;
   courtName?: string;
   userName?: string;
+}
+
+export interface ReservationCreatePayload {
+  fecha: string;
+  hora_inicio: string;
+  hora_fin: string;
+  plazas_parciales?: number | null;
+  tipo_reserva: string;
+  id_user: number;
+  id_espacio: number;
 }
 
 export interface Court {
   id: number;
   nombre: string;
   capacidad?: number;
-  precio?: number;
+  precio_hora?: number;
+  precio_hora_parcial?: number | null;
   permite_reserva_parcial?: boolean;
   id_tipo_espacio?: number;
   tipo_espacio?: string;
@@ -37,13 +50,21 @@ export interface Court {
 
 export interface SpaceType {
   id: number;
-  nombre: string;
-  descripcion?: string;
+  tipo: string;
+  permite_reserva_parcial: boolean;
 }
 
 export interface Penalty {
   id: number;
-  motivo?: string;
-  estado?: string;
-  fecha?: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  tipo_penalizacion: string;
+  id_reserva: number;
+}
+
+export interface PenalizationCreatePayload {
+  fecha_inicio: string;
+  fecha_fin: string;
+  tipo_penalizacion: string;
+  id_reserva: number;
 }
