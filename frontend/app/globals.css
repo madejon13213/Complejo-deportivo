@@ -1,29 +1,56 @@
 @import "tailwindcss";
 
 @theme {
-  --color-azul-pro: #0052FF;
-  --color-lima-neon: #CCFF00;
-  --color-carbon: #1A1A1B;
-  --color-nieve: #F8F9FA;
-  --color-acero: #E2E8F0;
+  --color-azul-pro: #5c7bff;
+  --color-lima-neon: #e8863a;
+  --color-carbon: #0c0f15;
+  --color-nieve: #f4f6ff;
+  --color-acero: #2a3347;
 }
 
 :root {
-  background-color: #F8F9FA;
-  color: #1A1A1B;
+  color: #f4f6ff;
+  background-color: #0c0f15;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  font-family: var(--font-body);
-  background: radial-gradient(circle at top right, rgba(0, 82, 255, 0.08), transparent 35%), #F8F9FA;
+  font-family: var(--font-body), sans-serif;
+  color: #f4f6ff;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(109, 130, 255, 0.22), transparent 35%),
+    radial-gradient(circle at 80% 20%, rgba(255, 138, 61, 0.18), transparent 40%),
+    radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px),
+    #0c0f15;
+  background-size: auto, auto, 24px 24px, auto;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-titles);
-  text-transform: uppercase;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-family: var(--font-titles), serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  transition: all 180ms ease;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid #6d82ff;
+  outline-offset: 2px;
 }
