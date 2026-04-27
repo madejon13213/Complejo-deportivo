@@ -35,6 +35,18 @@ export interface ReservationCreatePayload {
   id_espacio: number;
 }
 
+export interface ReservationSearchItem extends Reservation {
+  usuario_nombre: string;
+}
+
+export interface ReservationSearchResponse {
+  items: ReservationSearchItem[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface Court {
   id: number;
   nombre: string;
@@ -63,8 +75,7 @@ export interface Penalty {
 }
 
 export interface PenalizationCreatePayload {
-  fecha_inicio: string;
-  fecha_fin: string;
-  tipo_penalizacion: string;
   id_reserva: number;
+  motivo: string;
+  fecha_penalizacion?: string;
 }
