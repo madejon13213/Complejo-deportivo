@@ -15,18 +15,18 @@ export default function Input({ label, icon, error, type = "text", ...props }: I
 
   return (
     <label className="block space-y-1">
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-sm font-medium text-gray-200">{label}</span>
       <div className="relative">
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
         <input
           type={isPassword && showPassword ? "text" : type}
-          className={`w-full rounded-xl border border-acero bg-white py-2 ${icon ? "pl-10" : "pl-3"} pr-10 text-sm outline-none focus:border-azul-pro`}
+          className={`w-full rounded-2xl border border-white/20 bg-black/30 py-2 text-sm text-white placeholder:text-gray-500 ${icon ? "pl-10" : "pl-3"} pr-10 outline-none focus:border-[#6d82ff] focus:bg-black/40`}
           {...props}
         />
         {isPassword && (
           <button
             type="button"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
           >
@@ -34,7 +34,7 @@ export default function Input({ label, icon, error, type = "text", ...props }: I
           </button>
         )}
       </div>
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && <span className="text-xs text-red-400">{error}</span>}
     </label>
   );
 }
