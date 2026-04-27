@@ -1,26 +1,23 @@
 import { Calendar, Clock, MapPin } from "lucide-react";
-import { Reservation } from "@/lib/types";
+
 import Badge from "@/app/components/UI/Badge";
+import { Reservation } from "@/lib/types";
 
 interface ReservationCardProps {
   reservation: Reservation;
 }
 
 export default function ReservationCard({ reservation }: ReservationCardProps) {
-  const tone =
-    reservation.estado === "confirmada"
-      ? "success"
-      : reservation.estado === "cancelada"
-      ? "error"
-      : "neutral";
+  const normalized = reservation.estado.toLowerCase();
+  const tone = normalized === "confirmada" ? "success" : normalized === "cancelada" ? "error" : "neutral";
 
   return (
-    <article className="rounded-2xl border border-acero bg-white p-4 shadow-sm">
+    <article className="rounded-2xl border border-white/15 bg-black/35 p-4 text-white backdrop-blur-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-lg">Reserva #{reservation.id}</h3>
+        <h3 className="text-lg text-white">Reserva #{reservation.id}</h3>
         <Badge tone={tone}>{reservation.estado || "pendiente"}</Badge>
       </div>
-      <div className="space-y-2 text-sm text-gray-600">
+      <div className="space-y-2 text-sm text-gray-200">
         <p className="inline-flex items-center gap-2">
           <MapPin size={14} /> Espacio #{reservation.id_espacio}
         </p>
