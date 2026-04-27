@@ -28,15 +28,6 @@ def create_penalty(
     return PenaltyService.create_penalty(payload, current_admin, db)
 
 
-@router.get("/{id}", response_model=PenaltyResponse, status_code=status.HTTP_200_OK)
-def get_penalty_by_id(
-    id: int,
-    current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
-    db: Session = Depends(get_db),
-):
-    return PenaltyService.get_penalty_by_id(id, db)
-
-
 @router.get("/user/{id}", response_model=list[PenaltyResponse], status_code=status.HTTP_200_OK)
 def get_penalties_by_user(
     id: int,
@@ -53,3 +44,12 @@ def get_penalty_by_reservation(
     db: Session = Depends(get_db),
 ):
     return PenaltyService.get_penalty_by_reservation(id, db)
+
+
+@router.get("/{id}", response_model=PenaltyResponse, status_code=status.HTTP_200_OK)
+def get_penalty_by_id(
+    id: int,
+    current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
+    db: Session = Depends(get_db),
+):
+    return PenaltyService.get_penalty_by_id(id, db)
