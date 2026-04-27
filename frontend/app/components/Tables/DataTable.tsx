@@ -37,7 +37,7 @@ export default function DataTable<T>({ rows, columns, emptyMessage = "Sin datos"
   const paginatedRows = filteredRows.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return (
-    <section className="space-y-3 rounded-2xl border border-acero bg-white p-4">
+    <section className="space-y-3 rounded-[24px] border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
       <input
         value={search}
         onChange={(event) => {
@@ -45,12 +45,12 @@ export default function DataTable<T>({ rows, columns, emptyMessage = "Sin datos"
           setPage(1);
         }}
         placeholder="Buscar..."
-        className="w-full rounded-xl border border-acero px-3 py-2 text-sm"
+        className="w-full rounded-2xl border border-white/20 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500"
       />
 
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-nieve text-left">
+          <thead className="border-b border-white/10 bg-black/20 text-left text-gray-100">
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="px-3 py-2">
@@ -61,7 +61,7 @@ export default function DataTable<T>({ rows, columns, emptyMessage = "Sin datos"
           </thead>
           <tbody>
             {paginatedRows.map((row, idx) => (
-              <tr key={idx} className="border-t border-acero">
+              <tr key={idx} className="border-t border-white/10 text-gray-200">
                 {columns.map((column) => (
                   <td key={column.key} className="px-3 py-2">
                     {column.render(row)}
@@ -73,11 +73,11 @@ export default function DataTable<T>({ rows, columns, emptyMessage = "Sin datos"
         </table>
       </div>
 
-      {paginatedRows.length === 0 && <p className="text-sm text-gray-600">{emptyMessage}</p>}
+      {paginatedRows.length === 0 && <p className="text-sm text-gray-400">{emptyMessage}</p>}
 
-      <div className="flex items-center justify-end gap-2 text-sm">
+      <div className="flex items-center justify-end gap-2 text-sm text-gray-300">
         <button
-          className="rounded-lg border border-acero px-3 py-1 disabled:opacity-50"
+          className="rounded-full border border-white/20 px-3 py-1 disabled:opacity-50"
           disabled={safePage <= 1}
           onClick={() => setPage((prev) => Math.max(1, prev - 1))}
         >
@@ -87,7 +87,7 @@ export default function DataTable<T>({ rows, columns, emptyMessage = "Sin datos"
           {safePage} / {totalPages}
         </span>
         <button
-          className="rounded-lg border border-acero px-3 py-1 disabled:opacity-50"
+          className="rounded-full border border-white/20 px-3 py-1 disabled:opacity-50"
           disabled={safePage >= totalPages}
           onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
         >
