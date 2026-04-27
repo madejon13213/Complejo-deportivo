@@ -1,7 +1,10 @@
-from app.repositories.base_repository import BaseRepository
-from app.tables.tables import Reserva
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
+
+from sqlalchemy import func
+
+from app.repositories.base_repository import BaseRepository
+from app.tables.tables import Reserva, Usuario
 
 
 class ReservationRepository(BaseRepository):
@@ -22,9 +25,46 @@ class ReservationRepository(BaseRepository):
         ahora_fecha = ahora.date()
         ahora_hora = ahora.time()
         return self.db.query(Reserva).filter(
-            (Reserva.fecha > ahora_fecha) | 
-            ((Reserva.fecha == ahora_fecha) & (Reserva.hora_fin > ahora_hora))
+            (Reserva.fecha > ahora_fecha)
+            | ((Reserva.fecha == ahora_fecha) & (Reserva.hora_fin > ahora_hora))
         ).all()
+
+    def get_filtered_paginated(
+        self,
+        fecha: Optional[date],
+        usuario: Optional[str],
+        page: int,
+        limit: int,
+    ):
+        base_query = self.db.query(Reserva, Usuario).join(Usuario, Usuario.id == Reserva.id_user)
+
+        if fecha:
+            base_query = base_query.filter(Reserva.fecha == fecha)
+
+        if usuario:
+            normalized = f"%{usuario.strip().lower()}%"
+            base_query = base_query.filter(
+                func.lower(
+                    func.concat(
+                        Usuario.nombre,
+                        " ",
+                        Usuario.pri_ape,
+                        " ",
+                        func.coalesce(Usuario.seg_ape, ""),
+                    )
+                ).like(normalized)
+            )
+
+        total = base_query.count()
+        items = (
+            base_query
+            .order_by(Reserva.fecha.desc(), Reserva.hora_inicio.desc(), Reserva.id.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
+
+        return items, total
 
     def create(self, reserva: Reserva) -> Reserva:
         self.db.add(reserva)
