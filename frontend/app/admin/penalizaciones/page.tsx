@@ -25,14 +25,14 @@ export default function AdminPenalizacionesPage() {
     },
     {
       key: "tipo",
-      header: "Tipo",
+      header: "Motivo",
       render: (row: Penalty) => row.tipo_penalizacion,
       searchable: (row: Penalty) => row.tipo_penalizacion,
     },
     {
       key: "rango",
-      header: "Rango",
-      render: (row: Penalty) => `${row.fecha_inicio} - ${row.fecha_fin}`,
+      header: "Fecha",
+      render: (row: Penalty) => row.fecha_inicio,
       searchable: (row: Penalty) => `${row.fecha_inicio} ${row.fecha_fin}`,
     },
   ];
@@ -40,13 +40,9 @@ export default function AdminPenalizacionesPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl">Admin · Penalizaciones</h1>
+        <h1 className="text-4xl font-medium tracking-tight">Admin · Penalizaciones</h1>
         <PenalizationForm onSuccess={penaltiesQuery.refetch} />
       </div>
-      <Toast
-        kind="info"
-        message="Si el backend no expone /penalties/create, la creacion devolvera error controlado y no rompe la vista."
-      />
       {penaltiesQuery.error && <Toast kind="error" message={penaltiesQuery.error} />}
       <DataTable rows={penaltiesQuery.data || []} columns={columns} emptyMessage="No hay penalizaciones registradas." />
     </div>
