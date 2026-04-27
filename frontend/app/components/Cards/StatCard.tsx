@@ -8,10 +8,10 @@ interface StatCardProps {
 
 export default function StatCard({ title, value, icon }: StatCardProps) {
   return (
-    <article className="rounded-2xl border border-acero bg-white p-5 shadow-sm">
-      <div className="mb-3 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{icon}</div>
-      <p className="text-sm text-gray-500">{title}</p>
-      <h3 className="text-2xl">{value}</h3>
+    <article className="rounded-2xl border border-white/15 bg-black/35 p-5 text-white backdrop-blur-sm">
+      <div className="mb-3 inline-flex rounded-lg bg-white/10 p-2 text-[#88a0ff]">{icon}</div>
+      <p className="text-sm text-gray-300">{title}</p>
+      <h3 className="text-2xl text-white">{value}</h3>
     </article>
   );
 }
