@@ -1,10 +1,8 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
-from typing import Optional
 from datetime import date, time
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
-from datetime import date, time
-from typing import Optional
+
 
 class ReservationResponse(BaseModel):
     id: int
@@ -19,6 +17,7 @@ class ReservationResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class ReservationCreate(BaseModel):
     fecha: date
     hora_inicio: time
@@ -29,6 +28,7 @@ class ReservationCreate(BaseModel):
     id_espacio: int
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class ReservationUpdate(BaseModel):
     fecha: Optional[date] = None
@@ -41,3 +41,24 @@ class ReservationUpdate(BaseModel):
     id_espacio: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ReservationSearchItem(BaseModel):
+    id: int
+    fecha: date
+    hora_inicio: time
+    hora_fin: time
+    estado: str
+    plazas_parciales: Optional[int] = None
+    tipo_reserva: str
+    id_user: int
+    id_espacio: int
+    usuario_nombre: str
+
+
+class ReservationSearchResponse(BaseModel):
+    items: list[ReservationSearchItem]
+    total: int
+    page: int
+    limit: int
+    total_pages: int
