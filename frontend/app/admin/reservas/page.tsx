@@ -1,76 +1,267 @@
 "use client";
 
-import { useState } from "react";
-import DataTable from "@/app/components/Tables/DataTable";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+
 import Button from "@/app/components/UI/Button";
+import Input from "@/app/components/UI/Input";
 import Toast from "@/app/components/UI/Toast";
-import { useApiQuery } from "@/lib/hooks/useApiQuery";
-import { cancelReservation, getAllReservations } from "@/lib/services/reservations";
-import { Reservation } from "@/lib/types";
+import { cancelReservation, searchReservations } from "@/lib/services/reservations";
+import { createPenalty } from "@/lib/services/penalties";
+import { ReservationSearchItem } from "@/lib/types";
+
+const PAGE_SIZE = 20;
+
+interface PenaltyModalState {
+  open: boolean;
+  reservation: ReservationSearchItem | null;
+}
 
 export default function AdminReservasPage() {
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
-  const reservationsQuery = useApiQuery<Reservation[]>(() => getAllReservations(), []);
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error" | "warning" | "info"; message: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<ReservationSearchItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const [page, setPage] = useState(1);
+  const [usuario, setUsuario] = useState("");
+  const [fecha, setFecha] = useState("");
+
+  const [penaltyState, setPenaltyState] = useState<PenaltyModalState>({ open: false, reservation: null });
+  const [penaltyReason, setPenaltyReason] = useState("");
+  const [savingPenalty, setSavingPenalty] = useState(false);
+
+  const [refreshFlag, setRefreshFlag] = useState(0);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setFeedback(null);
+
+      try {
+        const response = await searchReservations({
+          fecha: fecha || undefined,
+          usuario: usuario || undefined,
+          page,
+          limit: PAGE_SIZE,
+        });
+
+        setRows(response.items);
+        setTotal(response.total);
+        setTotalPages(Math.max(1, response.total_pages));
+      } catch (error) {
+        setRows([]);
+        setTotal(0);
+        setTotalPages(1);
+        setFeedback({
+          kind: "error",
+          message: error instanceof Error ? error.message : "No se pudieron cargar las reservas.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void load();
+  }, [page, usuario, fecha, refreshFlag]);
+
+  const pageLabel = useMemo(() => {
+    if (total === 0) return "Sin resultados";
+
+    const from = (page - 1) * PAGE_SIZE + 1;
+    const to = Math.min(page * PAGE_SIZE, total);
+    return `Mostrando ${from}-${to} de ${total}`;
+  }, [page, total]);
 
   const onCancel = async (id: number) => {
     setFeedback(null);
+
     try {
       await cancelReservation(id);
       setFeedback({ kind: "success", message: "Reserva cancelada/eliminada correctamente." });
-      await reservationsQuery.refetch();
+      setRefreshFlag((prev) => prev + 1);
     } catch (error) {
-      setFeedback({ kind: "error", message: error instanceof Error ? error.message : "No se pudo cancelar la reserva." });
+      setFeedback({
+        kind: "error",
+        message: error instanceof Error ? error.message : "No se pudo cancelar la reserva.",
+      });
     }
   };
 
-  const columns = [
-    {
-      key: "id",
-      header: "ID",
-      render: (row: Reservation) => row.id,
-      searchable: (row: Reservation) => String(row.id),
-    },
-    {
-      key: "espacio",
-      header: "Espacio",
-      render: (row: Reservation) => row.id_espacio,
-      searchable: (row: Reservation) => String(row.id_espacio),
-    },
-    {
-      key: "usuario",
-      header: "Usuario",
-      render: (row: Reservation) => row.id_user,
-      searchable: (row: Reservation) => String(row.id_user),
-    },
-    {
-      key: "franja",
-      header: "Franja",
-      render: (row: Reservation) => `${row.fecha} · ${row.hora_inicio} - ${row.hora_fin}`,
-      searchable: (row: Reservation) => `${row.fecha} ${row.hora_inicio} ${row.hora_fin}`,
-    },
-    {
-      key: "estado",
-      header: "Estado",
-      render: (row: Reservation) => row.estado,
-      searchable: (row: Reservation) => row.estado,
-    },
-    {
-      key: "acciones",
-      header: "Acciones",
-      render: (row: Reservation) => (
-        <Button variant="danger" onClick={() => onCancel(row.id)}>
-          Cancelar
-        </Button>
-      ),
-    },
-  ];
+  const openPenaltyModal = (reservation: ReservationSearchItem) => {
+    setPenaltyReason("");
+    setPenaltyState({ open: true, reservation });
+  };
+
+  const closePenaltyModal = () => {
+    setPenaltyState({ open: false, reservation: null });
+    setPenaltyReason("");
+  };
+
+  const onPenaltySubmit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!penaltyState.reservation) return;
+
+    const reason = penaltyReason.trim();
+    if (!reason) {
+      setFeedback({ kind: "warning", message: "El motivo de la penalizacion es obligatorio." });
+      return;
+    }
+
+    setSavingPenalty(true);
+    setFeedback(null);
+
+    try {
+      await createPenalty({
+        id_reserva: penaltyState.reservation.id,
+        motivo: reason,
+        fecha_penalizacion: new Date().toISOString().slice(0, 10),
+      });
+
+      setFeedback({ kind: "success", message: "Penalizacion aplicada correctamente." });
+      closePenaltyModal();
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message: error instanceof Error ? error.message : "No se pudo aplicar la penalizacion.",
+      });
+    } finally {
+      setSavingPenalty(false);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
-      <h1 className="text-3xl">Admin · Reservas</h1>
+      <h1 className="text-4xl font-medium tracking-tight">Admin · Reservas</h1>
+
+      <section className="grid gap-3 rounded-[24px] border border-white/15 bg-white/5 p-4 backdrop-blur-sm md:grid-cols-4">
+        <Input
+          label="Buscar por usuario"
+          value={usuario}
+          onChange={(event) => {
+            setPage(1);
+            setUsuario(event.target.value);
+          }}
+          placeholder="Ej. Juan"
+        />
+
+        <Input
+          label="Filtrar por fecha"
+          type="date"
+          value={fecha}
+          onChange={(event) => {
+            setPage(1);
+            setFecha(event.target.value);
+          }}
+        />
+
+        <div className="flex items-end">
+          <Button variant="secondary" onClick={() => {
+            setPage(1);
+            setUsuario("");
+            setFecha("");
+          }}>
+            Limpiar filtros
+          </Button>
+        </div>
+
+        <div className="flex items-end justify-end text-sm text-gray-300">{pageLabel}</div>
+      </section>
+
       {feedback && <Toast kind={feedback.kind} message={feedback.message} />}
-      {reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
-      <DataTable rows={reservationsQuery.data || []} columns={columns} emptyMessage="No hay reservas registradas." />
+
+      <section className="overflow-hidden rounded-[24px] border border-white/15 bg-white/5 backdrop-blur-sm">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-white/10 bg-black/20 text-left text-gray-200">
+              <tr>
+                <th className="px-4 py-3">ID</th>
+                <th className="px-4 py-3">Espacio</th>
+                <th className="px-4 py-3">Usuario</th>
+                <th className="px-4 py-3">Franja</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {!loading && rows.length === 0 && (
+                <tr>
+                  <td className="px-4 py-4 text-gray-400" colSpan={6}>No hay reservas para los filtros aplicados.</td>
+                </tr>
+              )}
+
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b border-white/10">
+                  <td className="px-4 py-3">{row.id}</td>
+                  <td className="px-4 py-3">{row.id_espacio}</td>
+                  <td className="px-4 py-3">{row.usuario_nombre}</td>
+                  <td className="px-4 py-3">{row.fecha} · {row.hora_inicio} - {row.hora_fin}</td>
+                  <td className="px-4 py-3">{row.estado}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-2">
+                      <Button variant="danger" onClick={() => onCancel(row.id)}>
+                        Cancelar
+                      </Button>
+                      <Button variant="secondary" onClick={() => openPenaltyModal(row)}>
+                        Penalizar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="secondary"
+          disabled={page <= 1}
+          onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+        >
+          Anterior
+        </Button>
+        <span className="text-sm text-gray-300">Pagina {page} de {totalPages}</span>
+        <Button
+          variant="secondary"
+          disabled={page >= totalPages}
+          onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+        >
+          Siguiente
+        </Button>
+      </div>
+
+      {penaltyState.open && penaltyState.reservation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-2xl border border-white/20 bg-[#0f1115] p-5">
+            <h2 className="text-xl font-medium">Aplicar penalizacion</h2>
+            <p className="mt-1 text-sm text-gray-300">
+              Reserva #{penaltyState.reservation.id} · Usuario: {penaltyState.reservation.usuario_nombre}
+            </p>
+
+            <form className="mt-4 space-y-3" onSubmit={onPenaltySubmit}>
+              <Input
+                label="Motivo"
+                value={penaltyReason}
+                onChange={(event) => setPenaltyReason(event.target.value)}
+                placeholder="Describe el motivo de la penalizacion"
+                required
+              />
+
+              <div className="flex gap-2">
+                <Button type="submit" disabled={savingPenalty}>
+                  {savingPenalty ? "Guardando..." : "Guardar penalizacion"}
+                </Button>
+                <Button type="button" variant="secondary" onClick={closePenaltyModal}>
+                  Cancelar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
