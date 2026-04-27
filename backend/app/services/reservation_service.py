@@ -1,8 +1,18 @@
+from datetime import date
+from math import ceil
+from typing import Optional
+
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.repositories.reservation_repository import ReservationRepository
-from app.schemas.reservation_schema import ReservationResponse, ReservationCreate, ReservationUpdate
+from app.schemas.reservation_schema import (
+    ReservationCreate,
+    ReservationResponse,
+    ReservationSearchItem,
+    ReservationSearchResponse,
+    ReservationUpdate,
+)
 from app.tables.tables import Reserva
 
 
@@ -18,7 +28,50 @@ class ReservationService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar la lista de reservas de la base de datos",
             )
-    
+
+    @staticmethod
+    def get_filtered_reservations(
+        db: Session,
+        fecha: Optional[date],
+        usuario: Optional[str],
+        page: int,
+        limit: int,
+    ) -> ReservationSearchResponse:
+        repo = ReservationRepository(db)
+        try:
+            rows, total = repo.get_filtered_paginated(fecha=fecha, usuario=usuario, page=page, limit=limit)
+            items = [
+                ReservationSearchItem(
+                    id=reserva.id,
+                    fecha=reserva.fecha,
+                    hora_inicio=reserva.hora_inicio,
+                    hora_fin=reserva.hora_fin,
+                    estado=reserva.estado,
+                    plazas_parciales=reserva.plazas_parciales,
+                    tipo_reserva=reserva.tipo_reserva,
+                    id_user=reserva.id_user,
+                    id_espacio=reserva.id_espacio,
+                    usuario_nombre=" ".join(
+                        [part for part in [usuario_row.nombre, usuario_row.pri_ape, usuario_row.seg_ape] if part]
+                    ),
+                )
+                for reserva, usuario_row in rows
+            ]
+
+            total_pages = max(1, ceil(total / limit)) if limit > 0 else 1
+            return ReservationSearchResponse(
+                items=items,
+                total=total,
+                page=page,
+                limit=limit,
+                total_pages=total_pages,
+            )
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al intentar filtrar reservas",
+            )
+
     @staticmethod
     def get_reservation_by_id(reservation_id: int, db: Session) -> ReservationResponse:
         """Obtiene una reserva por su ID."""
@@ -83,21 +136,6 @@ class ReservationService:
         """Crea una nueva reserva."""
         repo = ReservationRepository(db)
         try:
-            # Validar que el espacio y usuario existan (opcional, pero recomendado)
-            # space = db.query(Espacio).filter(Espacio.id == reservation_data.id_espacio).first()
-            # user = db.query(Usuario).filter(Usuario.id == reservation_data.id_usuario).first()
-            # if not space or not user:
-            #     raise HTTPException(status_code=404, detail="Espacio o usuario no encontrado")
-
-            # Validar que no haya conflictos de horarios (opcional pero recomendado)
-            # conflicting_reservations = repo.get_conflicting_reservations(
-            #     reservation_data.id_espacio,
-            #     reservation_data.hora_inicio,
-            #     reservation_data.hora_fin
-            # )
-            # if conflicting_reservations:
-            #     raise HTTPException(status_code=400, detail="Conflicto de horarios con reservas existentes")
-
             reserva_dict = reservation_data.dict()
             reserva_dict["estado"] = "Pendiente"
             new_reservation = Reserva(**reserva_dict)
@@ -124,7 +162,6 @@ class ReservationService:
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
 
-            # Actualizar campos si vienen en el payload
             for field, value in reservation_data.dict().items():
                 if value is not None:
                     setattr(reservation, field, value)
@@ -152,18 +189,14 @@ class ReservationService:
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
 
-            # Validar que la reserva se pueda eliminar (ej: no esté en progreso)
-            # if reservation.hora_inicio <= datetime.now() <= reservation.hora_fin:
-            #     raise HTTPException(status_code=400, detail="No se puede eliminar una reserva en progreso")
-
             deleted = repo.delete(reservation)
             if deleted:
                 return {"message": f"Reserva con ID {reservation_id} eliminada exitosamente"}
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="No se pudo eliminar la reserva",
-                )
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudo eliminar la reserva",
+            )
         except HTTPException:
             raise
         except Exception as e:
