@@ -29,12 +29,10 @@ export function toIsoDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
-export function toUtcSlot(dateIso: string, hour: number) {
-  const local = new Date(`${dateIso}T${String(hour).padStart(2, "0")}:00:00`);
-  const utcIso = local.toISOString();
+export function toLocalSlot(dateIso: string, hour: number) {
   return {
-    fecha: utcIso.slice(0, 10),
-    hora: `${utcIso.slice(11, 19)}`,
+    fecha: dateIso,
+    hora: `${String(hour).padStart(2, "0")}:00:00`,
   };
 }
 
