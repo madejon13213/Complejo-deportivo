@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
-import { Inter, Montserrat } from "next/font/google";
-import "./globals.css";
-import Header from "@/app/components/Layout/Header";
+import { Cormorant_Garamond, Manrope } from "next/font/google";
+
 import Footer from "@/app/components/Layout/Footer";
+import Header from "@/app/components/Layout/Header";
+import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
-const montserrat = Montserrat({
+const cormorant = Cormorant_Garamond({
   variable: "--font-titles",
   subsets: ["latin"],
-  weight: ["700", "900"],
+  weight: ["500", "600", "700"],
 });
 
-const inter = Inter({
+const manrope = Manrope({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es">
-      <body className={`${montserrat.variable} ${inter.variable} min-h-screen bg-nieve text-carbon antialiased`}>
+      <body className={`${cormorant.variable} ${manrope.variable} min-h-screen text-[#f4f6ff] antialiased`}>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />
