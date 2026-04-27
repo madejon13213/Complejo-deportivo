@@ -2,9 +2,10 @@
 
 import { ReactNode, useState } from "react";
 import { AlertTriangle, Calendar, Clock, LogOut, Settings, Trophy } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
-import Button from "@/app/components/UI/Button";
+
 import ChangePasswordModal from "@/app/components/Modals/ChangePasswordModal";
+import Button from "@/app/components/UI/Button";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ProfilePage() {
   const { logout, role } = useAuth();
@@ -12,14 +13,14 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-4 md:p-8">
-      <h1 className="text-3xl">Mi perfil</h1>
-      <section className="rounded-2xl border border-acero bg-white p-6">
-        <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-azul-pro text-white text-xl font-semibold">U</div>
-        <div className="grid gap-3 md:grid-cols-2">
-          <p><strong>Nombre:</strong> Usuario Demo</p>
-          <p><strong>Email:</strong> demo@mail.com</p>
-          <p><strong>Teléfono:</strong> 600000000</p>
-          <p><strong>Rol:</strong> {role || "cliente"}</p>
+      <h1 className="text-3xl text-white">Mi perfil</h1>
+      <section className="rounded-2xl border border-white/15 bg-black/35 p-6 text-white backdrop-blur-sm">
+        <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#5c7bff] text-xl font-semibold text-white">U</div>
+        <div className="grid gap-3 md:grid-cols-2 text-gray-100">
+          <p><strong className="text-white">Nombre:</strong> Usuario Demo</p>
+          <p><strong className="text-white">Email:</strong> demo@mail.com</p>
+          <p><strong className="text-white">Teléfono:</strong> 600000000</p>
+          <p><strong className="text-white">Rol:</strong> {role || "cliente"}</p>
         </div>
       </section>
 
@@ -44,10 +45,10 @@ export default function ProfilePage() {
 
 function Card({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <article className="rounded-2xl border border-acero bg-white p-4">
-      <div className="mb-2 inline-flex rounded-lg bg-nieve p-2 text-azul-pro">{icon}</div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-xl font-semibold">{value}</p>
+    <article className="rounded-2xl border border-white/15 bg-black/35 p-4 text-white backdrop-blur-sm">
+      <div className="mb-2 inline-flex rounded-lg bg-white/10 p-2 text-[#88a0ff]">{icon}</div>
+      <p className="text-xs text-gray-300">{label}</p>
+      <p className="text-xl font-semibold text-white">{value}</p>
     </article>
   );
 }
