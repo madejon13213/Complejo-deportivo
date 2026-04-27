@@ -20,7 +20,7 @@ export default function PenaltiesPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-8">
-      <h1 className="text-3xl">Mis penalizaciones</h1>
+      <h1 className="text-4xl text-white">Mis penalizaciones</h1>
       {penaltiesQuery.loading && <Spinner />}
       {penaltiesQuery.error && <Toast kind="error" message={penaltiesQuery.error} />}
       <PenaltiesTable rows={penaltiesQuery.data || []} />
