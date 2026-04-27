@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Calendar, Dumbbell, Users, User, AlertTriangle, Shield } from "lucide-react";
+import { AlertTriangle, BarChart3, Calendar, Dumbbell, Shield, User, Users } from "lucide-react";
+
 import { useAuth } from "@/context/AuthContext";
 
 export default function Sidebar() {
@@ -27,14 +28,16 @@ export default function Sidebar() {
   const visibleLinks = isAdmin ? [...links, ...adminLinks] : links;
 
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-acero bg-white p-4 md:block">
+    <aside className="hidden w-64 shrink-0 border-r border-white/15 bg-black/35 p-4 backdrop-blur-sm md:block">
       <nav className="space-y-2">
         {visibleLinks.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
-              pathname.startsWith(item.href) ? "bg-azul-pro text-white" : "text-carbon hover:bg-nieve"
+              pathname.startsWith(item.href)
+                ? "bg-[#5c7bff] text-white"
+                : "text-gray-100 hover:bg-white/10 hover:text-white"
             }`}
           >
             {item.icon}
