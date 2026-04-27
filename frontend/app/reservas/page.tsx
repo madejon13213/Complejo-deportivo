@@ -2,29 +2,30 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+
+import WeeklyCalendar from "@/app/components/Domain/WeeklyCalendar";
 import Button from "@/app/components/UI/Button";
 import Input from "@/app/components/UI/Input";
 import Select from "@/app/components/UI/Select";
 import Spinner from "@/app/components/UI/Spinner";
 import Toast from "@/app/components/UI/Toast";
-import WeeklyCalendar from "@/app/components/Domain/WeeklyCalendar";
 import { useAuth } from "@/context/AuthContext";
 import { ApiError } from "@/lib/api";
-import { CalendarRange, toUtcSlot } from "@/lib/date";
+import { CalendarRange, toLocalSlot } from "@/lib/date";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getCourts } from "@/lib/services/courts";
 import { createReservation, getReservationsBySpace } from "@/lib/services/reservations";
 import { Court, Reservation } from "@/lib/types";
 
 function overlaps(range: CalendarRange, reservation: Reservation) {
-  if (reservation.fecha !== range.date || reservation.estado === "cancelada") return false;
+  if (reservation.fecha !== range.date || reservation.estado.toLowerCase() === "cancelada") return false;
   const start = Number(reservation.hora_inicio.slice(0, 2));
   const end = Number(reservation.hora_fin.slice(0, 2));
   return range.startHour < end && range.endHour > start;
 }
 
 function getReservationUnits(reservation: Reservation, capacity: number, allowsPartial: boolean): number {
-  if (allowsPartial && reservation.tipo_reserva === "parcial") {
+  if (allowsPartial && reservation.tipo_reserva.toLowerCase() === "parcial") {
     return Math.max(1, reservation.plazas_parciales || 1);
   }
   return capacity;
@@ -47,8 +48,7 @@ export default function ReservasPage() {
   const [selection, setSelection] = useState<CalendarRange | null>(null);
   const [numPersonas, setNumPersonas] = useState("1");
   const [espaciosReservados, setEspaciosReservados] = useState("1");
-  const [feedback, setFeedback] = useState<{ kind: "success" | "error" | "warning"; message: string } | null>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: "success" | "error" | "warning" | "info"; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
   const courtsQuery = useApiQuery<Court[]>(() => getCourts(), []);
@@ -74,8 +74,17 @@ export default function ReservasPage() {
   );
 
   useEffect(() => {
+    if (!selectedCourt) return;
+
+    const interval = setInterval(() => {
+      void reservationsQuery.refetch();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [selectedCourt, reservationsQuery]);
+
+  useEffect(() => {
     setSelection(null);
-    setConfirming(false);
     setNumPersonas("1");
     setEspaciosReservados("1");
   }, [selectedCourt]);
@@ -103,9 +112,11 @@ export default function ReservasPage() {
       : occupiedUnitsForSelection >= courtCapacity
     : false;
 
-  const onOpenConfirm = () => {
+  const canConfirm = Boolean(selection && selectedCourt && numericUserId);
+
+  const onConfirm = async () => {
     if (!selection || !selectedCourt || !numericUserId) {
-      setFeedback({ kind: "warning", message: "Selecciona pista y franja horaria antes de confirmar." });
+      setFeedback({ kind: "warning", message: "Primero selecciona pista y horario." });
       return;
     }
 
@@ -129,13 +140,6 @@ export default function ReservasPage() {
       }
     }
 
-    setFeedback(null);
-    setConfirming(true);
-  };
-
-  const onConfirm = async () => {
-    if (!selection || !selectedCourt || !numericUserId) return;
-
     if (selectedRangeConflict && role !== "club") {
       setFeedback({ kind: "error", message: "No hay disponibilidad suficiente para esta seleccion." });
       return;
@@ -144,31 +148,29 @@ export default function ReservasPage() {
     setSaving(true);
     setFeedback(null);
 
-    const startUtc = toUtcSlot(selection.date, selection.startHour);
-    const endUtc = toUtcSlot(selection.date, selection.endHour);
+    const startSlot = toLocalSlot(selection.date, selection.startHour);
+    const endSlot = toLocalSlot(selection.date, selection.endHour);
 
     const tipoReserva = allowsPartial && requestedSpaces < courtCapacity ? "parcial" : "completa";
 
     try {
       await createReservation({
-        fecha: startUtc.fecha,
-        hora_inicio: startUtc.hora,
-        hora_fin: endUtc.hora,
+        fecha: startSlot.fecha,
+        hora_inicio: startSlot.hora,
+        hora_fin: endSlot.hora,
         tipo_reserva: tipoReserva,
         plazas_parciales: tipoReserva === "parcial" ? requestedSpaces : null,
         id_user: numericUserId,
         id_espacio: Number(selectedCourt),
       });
 
-      setConfirming(false);
       setSelection(null);
-      setFeedback({ kind: "success", message: "Reserva creada correctamente en la pista seleccionada." });
+      setFeedback({ kind: "success", message: "Reserva creada correctamente." });
       await reservationsQuery.refetch();
     } catch (error) {
       const apiError = error as ApiError;
       if (apiError?.status === 409) {
-        setFeedback({ kind: "error", message: "La franja ya no esta disponible. Recargando disponibilidad..." });
-        setConfirming(false);
+        setFeedback({ kind: "error", message: "La franja ya no esta disponible. Se actualizo la disponibilidad." });
         await reservationsQuery.refetch();
         return;
       }
@@ -188,23 +190,34 @@ export default function ReservasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
-      <h1 className="text-3xl">Calendario de reservas</h1>
+    <div className="mx-auto max-w-7xl space-y-5 p-4 md:p-8">
+      <h1 className="text-4xl font-medium tracking-tight">Reservas</h1>
       {feedback && <Toast kind={feedback.kind} message={feedback.message} />}
 
-      <section className="grid gap-3 rounded-2xl border border-acero bg-white p-4 md:grid-cols-3">
-        <Select
-          label="Pista"
-          value={selectedCourt}
-          onChange={(event) => setSelectedCourt(event.target.value)}
-          options={[{ value: "", label: "Selecciona una pista" }, ...courtOptions]}
-        />
-        <div className="md:col-span-2 flex items-end">
-          <Button onClick={onOpenConfirm}>Confirmar seleccion</Button>
+      <section className="rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 1</p>
+            <Select
+              label="Seleccion de pista"
+              value={selectedCourt}
+              onChange={(event) => setSelectedCourt(event.target.value)}
+              options={[{ value: "", label: "Selecciona una pista" }, ...courtOptions]}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 2</p>
+            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-200">
+              {!selectedCourt && "Elige primero una pista para ver su horario disponible."}
+              {selectedCourt && reservationsQuery.loading && "Cargando disponibilidad en tiempo real..."}
+              {selectedCourt && !reservationsQuery.loading && "Disponibilidad cargada. Selecciona una o varias horas libres."}
+            </div>
+          </div>
         </div>
 
-        {allowsPartial && (
-          <>
+        {allowsPartial && selectedCourt && (
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
             <Input
               label="Numero de personas"
               type="number"
@@ -220,60 +233,64 @@ export default function ReservasPage() {
               value={espaciosReservados}
               onChange={(event) => setEspaciosReservados(event.target.value)}
             />
-            <div className="flex items-end text-sm text-gray-600">
+            <div className="flex items-end rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-300">
               Disponibles en franja: {availableUnitsForSelection}/{courtCapacity}
             </div>
-          </>
+          </div>
         )}
       </section>
 
-      {!selectedCourt && <Toast kind="info" message="Selecciona una pista para ver su disponibilidad real." />}
-      {selectedCourt && reservationsQuery.loading && <Spinner />}
+      {!selectedCourt && <Toast kind="info" message="Paso 1: selecciona una pista para desbloquear el horario." />}
       {selectedCourt && reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
 
-      <WeeklyCalendar
-        reservations={reservations}
-        role={role}
-        userId={numericUserId}
-        courtCapacity={courtCapacity}
-        allowsPartial={allowsPartial}
-        onSelectionChange={(nextRange) => setSelection(nextRange)}
-      />
-
-      {confirming && selection && (
-        <div className="rounded-2xl border border-acero bg-white p-4">
-          <h2 className="text-xl">Confirmar reserva</h2>
-          <p className="mt-2 text-sm text-gray-700">
-            Pista #{selectedCourt} · Dia {selection.date} · {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
-          </p>
-
-          {allowsPartial && (
-            <p className="mt-1 text-sm text-gray-700">
-              Personas: {numPersonas} · Subespacios: {requestedSpaces}/{courtCapacity}
-            </p>
-          )}
-
-          {selectedRangeConflict && role === "club" && (
-            <Toast
-              kind="warning"
-              message="La franja esta completa. Como club, puedes intentar override y el backend decidira si procede."
-            />
-          )}
-
-          {selectedRangeConflict && role !== "club" && (
-            <Toast kind="error" message="No hay disponibilidad suficiente en la pista seleccionada." />
-          )}
-
-          <div className="mt-3 flex gap-2">
-            <Button disabled={saving || (selectedRangeConflict && role !== "club")} onClick={onConfirm}>
-              {saving ? "Guardando..." : "Confirmar"}
-            </Button>
-            <Button variant="secondary" onClick={() => setConfirming(false)}>
-              Cancelar
+      {selectedCourt && (
+        <section className="space-y-3 rounded-[24px] border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 3: seleccion de horas</p>
+            <Button variant="secondary" onClick={() => reservationsQuery.refetch()}>
+              Refrescar disponibilidad
             </Button>
           </div>
-        </div>
+
+          {reservationsQuery.loading ? (
+            <Spinner />
+          ) : (
+            <WeeklyCalendar
+              reservations={reservations}
+              role={role}
+              userId={numericUserId}
+              courtCapacity={courtCapacity}
+              allowsPartial={allowsPartial}
+              onSelectionChange={(nextRange) => setSelection(nextRange)}
+            />
+          )}
+        </section>
       )}
+
+      <section className="rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 4</p>
+        <h2 className="mt-1 text-xl font-medium">Confirmacion de reserva</h2>
+
+        {!selection && <p className="mt-2 text-sm text-gray-300">Aun no has seleccionado un horario.</p>}
+
+        {selection && (
+          <p className="mt-2 text-sm text-gray-200">
+            Pista #{selectedCourt} · Dia {selection.date} · {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
+          </p>
+        )}
+
+        {selectedRangeConflict && role !== "club" && (
+          <div className="mt-3">
+            <Toast kind="error" message="No hay disponibilidad suficiente en la pista seleccionada." />
+          </div>
+        )}
+
+        <div className="mt-4">
+          <Button disabled={!canConfirm || saving || (selectedRangeConflict && role !== "club")} onClick={onConfirm}>
+            {saving ? "Confirmando..." : "Confirmar reserva"}
+          </Button>
+        </div>
+      </section>
     </div>
   );
 }
