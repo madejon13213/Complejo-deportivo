@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+
 import { CalendarRange, formatLabelDate, getHoursRange, getWeekDays, isPastSlot, toIsoDate } from "@/lib/date";
 import { Reservation } from "@/lib/types";
 
@@ -117,19 +118,19 @@ export default function WeeklyCalendar({
   };
 
   return (
-    <section className="space-y-3 rounded-2xl border border-acero bg-white p-4">
-      {warning && <p className="rounded-lg bg-yellow-50 px-3 py-2 text-sm text-yellow-700">{warning}</p>}
+    <section className="space-y-3 rounded-2xl border border-white/15 bg-black/35 p-4 backdrop-blur-sm">
+      {warning && <p className="rounded-lg border border-yellow-400/30 bg-yellow-500/10 px-3 py-2 text-sm text-yellow-200">{warning}</p>}
       <div className="grid grid-cols-[80px_repeat(7,minmax(0,1fr))] gap-1 text-xs">
         <div />
         {days.map((day) => (
-          <div key={day.toISOString()} className="rounded-lg bg-nieve px-2 py-2 text-center font-semibold text-carbon">
+          <div key={day.toISOString()} className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-center font-semibold text-gray-100">
             {formatLabelDate(day)}
           </div>
         ))}
 
         {hours.map((hour) => (
           <Fragment key={`hour-${hour}`}>
-            <div className="rounded-lg bg-nieve px-2 py-2 text-center font-semibold text-gray-600">
+            <div className="rounded-lg border border-white/15 bg-black/30 px-2 py-2 text-center font-semibold text-gray-100">
               {String(hour).padStart(2, "0")}:00
             </div>
             {days.map((day) => {
@@ -138,31 +139,33 @@ export default function WeeklyCalendar({
               const past = isPastSlot(dayIso, hour);
               const selectedCell = isSelected(dayIso, hour);
 
-              let cellClass = "bg-green-100 hover:bg-green-200";
+              let cellClass = "border-emerald-400/35 bg-emerald-500/20 text-emerald-100 hover:bg-emerald-500/30";
               let label = "Libre";
 
               if (slotState.isPartial) {
-                cellClass = "bg-amber-100 hover:bg-amber-200";
+                cellClass = "border-amber-400/40 bg-amber-500/20 text-amber-100 hover:bg-amber-500/30";
                 label = `${slotState.occupiedUnits}/${capacity}`;
               }
 
               if (slotState.isFull) {
-                cellClass = role === "club" ? "bg-red-200 hover:bg-red-300" : "bg-red-300";
+                cellClass = role === "club"
+                  ? "border-red-400/45 bg-red-500/25 text-red-100 hover:bg-red-500/35"
+                  : "border-red-400/45 bg-red-500/30 text-red-100";
                 label = "Ocupado";
               }
 
               if (slotState.hasOwnReservation) {
-                cellClass = "bg-blue-200";
+                cellClass = "border-blue-400/45 bg-blue-500/25 text-blue-100 hover:bg-blue-500/35";
                 label = "Tu reserva";
               }
 
               if (past) {
-                cellClass = "bg-gray-200";
+                cellClass = "border-slate-500/40 bg-slate-500/30 text-slate-100";
                 label = "Pasado";
               }
 
               if (selectedCell) {
-                cellClass = "bg-lime-neon";
+                cellClass = "border-[#e8863a] bg-[#e8863a]/35 text-white";
                 label = "Seleccionado";
               }
 
@@ -177,7 +180,7 @@ export default function WeeklyCalendar({
                   key={`${dayIso}-${hour}`}
                   type="button"
                   onClick={() => handleCellClick(dayIso, hour)}
-                  className={`h-10 rounded-md border border-acero text-[10px] transition ${cellClass}`}
+                  className={`h-10 rounded-md border text-[11px] font-semibold transition ${cellClass}`}
                   disabled={past || (slotState.isFull && role !== "club")}
                   title={title}
                 >
