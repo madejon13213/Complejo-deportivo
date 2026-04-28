@@ -54,6 +54,27 @@ class NotificationService:
             )
 
     @staticmethod
+    def get_my_notifications(db: Session, user_id: int, limit: int = 25) -> list[NotificationResponse]:
+        repo = NotificationRepository(db)
+        try:
+            notifications = repo.get_by_user(user_id=user_id, limit=limit)
+            logger.info(
+                "[NotificationService.get_my_notifications] user_id=%s total=%s",
+                user_id,
+                len(notifications),
+            )
+            return notifications
+        except Exception:
+            logger.exception(
+                "[NotificationService.get_my_notifications] error user_id=%s",
+                user_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="No se pudieron recuperar las notificaciones",
+            )
+
+    @staticmethod
     def mark_notification_as_read(db: Session, user_id: int, notification_id: int) -> NotificationResponse:
         repo = NotificationRepository(db)
         try:
