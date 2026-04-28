@@ -1,5 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field
+
 
 class UserRegister(BaseModel):
     nombre: str = Field(..., max_length=100)
@@ -8,11 +10,13 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6, description="Contraseña en texto plano a encriptar")
     telefono: Optional[str] = Field(None, max_length=20)
-    id_rol: int = Field(default=2, description="Comercialmente, 2 es Cliente. 1 es Admin.")
+    rol: str = Field(default="CLIENTE")
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1)
+
 
 class UserResponse(BaseModel):
     id: int
@@ -21,7 +25,7 @@ class UserResponse(BaseModel):
     seg_ape: Optional[str] = None
     email: EmailStr
     telefono: Optional[str] = None
-    id_rol: int
-    
+    rol: str
+
     class Config:
         from_attributes = True
