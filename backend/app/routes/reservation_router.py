@@ -75,7 +75,11 @@ def create_reservation(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
-    return ReservationService.create_reservation(reservation_data, db)
+    return ReservationService.create_reservation(
+        reservation_data=reservation_data,
+        db=db,
+        actor_role=current_user.get("rol", "CLIENTE"),
+    )
 
 
 @router.put("/update/{id}", response_model=ReservationResponse, status_code=status.HTTP_200_OK)
