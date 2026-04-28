@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date, datetime, time
 from typing import Optional
 
 from sqlalchemy import func
@@ -28,6 +28,26 @@ class ReservationRepository(BaseRepository):
             (Reserva.fecha > ahora_fecha)
             | ((Reserva.fecha == ahora_fecha) & (Reserva.hora_fin > ahora_hora))
         ).all()
+
+    def get_conflicting_for_update(
+        self,
+        space_id: int,
+        fecha_reserva: date,
+        hora_inicio: time,
+        hora_fin: time,
+    ) -> list[Reserva]:
+        return (
+            self.db.query(Reserva)
+            .filter(
+                Reserva.id_espacio == space_id,
+                Reserva.fecha == fecha_reserva,
+                Reserva.estado != "Cancelada",
+                Reserva.hora_inicio < hora_fin,
+                Reserva.hora_fin > hora_inicio,
+            )
+            .with_for_update()
+            .all()
+        )
 
     def get_filtered_paginated(
         self,
@@ -68,8 +88,7 @@ class ReservationRepository(BaseRepository):
 
     def create(self, reserva: Reserva) -> Reserva:
         self.db.add(reserva)
-        self.db.commit()
-        self.db.refresh(reserva)
+        self.db.flush()
         return reserva
 
     def update(self, reserva: Reserva) -> Reserva:
