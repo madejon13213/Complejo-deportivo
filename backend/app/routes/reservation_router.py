@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.auth import AuthManager
 from app.database import get_db
+from app.logger.logger_config import logger
 from app.schemas.reservation_schema import (
     ReservationCreate,
     ReservationResponse,
@@ -22,6 +23,7 @@ def get_all_reservations(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info("[reservation_router.get_all_reservations] requested_by=%s", current_user.get("id") or current_user.get("sub"))
     return ReservationService.get_all_reservations(db)
 
 
@@ -34,6 +36,14 @@ def search_reservations(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.search_reservations] requested_by=%s fecha=%s usuario=%s page=%s limit=%s",
+        current_user.get("id") or current_user.get("sub"),
+        fecha,
+        usuario,
+        page,
+        limit,
+    )
     return ReservationService.get_filtered_reservations(
         db=db,
         fecha=fecha,
@@ -48,6 +58,7 @@ def get_active_reservations(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info("[reservation_router.get_active_reservations] requested_by=%s", current_user.get("id") or current_user.get("sub"))
     return ReservationService.get_active_reservations(db)
 
 
@@ -57,6 +68,11 @@ def get_user_reservations(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.get_user_reservations] requested_by=%s target_user_id=%s",
+        current_user.get("id") or current_user.get("sub"),
+        id,
+    )
     return ReservationService.get_user_reservations(id, db)
 
 
@@ -66,6 +82,11 @@ def get_space_reservations(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.get_space_reservations] requested_by=%s space_id=%s",
+        current_user.get("id") or current_user.get("sub"),
+        id,
+    )
     return ReservationService.get_space_reservations(id, db)
 
 
@@ -75,10 +96,20 @@ def create_reservation(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    actor_role = current_user.get("rol", "CLIENTE")
+    logger.info(
+        "[reservation_router.create_reservation] requested_by=%s role=%s space_id=%s fecha=%s hora_inicio=%s hora_fin=%s",
+        current_user.get("id") or current_user.get("sub"),
+        actor_role,
+        reservation_data.id_espacio,
+        reservation_data.fecha,
+        reservation_data.hora_inicio,
+        reservation_data.hora_fin,
+    )
     return ReservationService.create_reservation(
         reservation_data=reservation_data,
         db=db,
-        actor_role=current_user.get("rol", "CLIENTE"),
+        actor_role=actor_role,
     )
 
 
@@ -89,6 +120,11 @@ def update_reservation(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.update_reservation] requested_by=%s reservation_id=%s",
+        current_user.get("id") or current_user.get("sub"),
+        id,
+    )
     return ReservationService.update_reservation(id, reservation_data, db)
 
 
@@ -98,6 +134,11 @@ def delete_reservation(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.delete_reservation] requested_by=%s reservation_id=%s",
+        current_user.get("id") or current_user.get("sub"),
+        id,
+    )
     return ReservationService.delete_reservation(id, db)
 
 
@@ -107,4 +148,9 @@ def get_reservation_by_id(
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
+    logger.info(
+        "[reservation_router.get_reservation_by_id] requested_by=%s reservation_id=%s",
+        current_user.get("id") or current_user.get("sub"),
+        id,
+    )
     return ReservationService.get_reservation_by_id(id, db)
