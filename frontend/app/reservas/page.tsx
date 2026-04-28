@@ -43,6 +43,7 @@ export default function ReservasPage() {
   const searchParams = useSearchParams();
   const { role, userId } = useAuth();
   const numericUserId = userId ? Number(userId) : null;
+  const normalizedRole = (role || "CLIENTE").toUpperCase();
 
   const [selectedCourt, setSelectedCourt] = useState<string>("");
   const [selection, setSelection] = useState<CalendarRange | null>(null);
@@ -140,7 +141,7 @@ export default function ReservasPage() {
       }
     }
 
-    if (selectedRangeConflict && role !== "club") {
+    if (selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN") {
       setFeedback({ kind: "error", message: "No hay disponibilidad suficiente para esta seleccion." });
       return;
     }
@@ -257,7 +258,7 @@ export default function ReservasPage() {
           ) : (
             <WeeklyCalendar
               reservations={reservations}
-              role={role}
+              role={normalizedRole}
               userId={numericUserId}
               courtCapacity={courtCapacity}
               allowsPartial={allowsPartial}
@@ -279,14 +280,21 @@ export default function ReservasPage() {
           </p>
         )}
 
-        {selectedRangeConflict && role !== "club" && (
+        {selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN" && (
           <div className="mt-3">
             <Toast kind="error" message="No hay disponibilidad suficiente en la pista seleccionada." />
           </div>
         )}
 
         <div className="mt-4">
-          <Button disabled={!canConfirm || saving || (selectedRangeConflict && role !== "club")} onClick={onConfirm}>
+          <Button
+            disabled={
+              !canConfirm ||
+              saving ||
+              (selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN")
+            }
+            onClick={onConfirm}
+          >
             {saving ? "Confirmando..." : "Confirmar reserva"}
           </Button>
         </div>
