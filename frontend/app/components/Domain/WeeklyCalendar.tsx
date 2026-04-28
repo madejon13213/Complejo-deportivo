@@ -40,6 +40,7 @@ export default function WeeklyCalendar({
   const hours = useMemo(() => getHoursRange(), []);
   const capacity = Math.max(1, courtCapacity || 1);
   const partialEnabled = Boolean(allowsPartial);
+  const normalizedRole = (role || "CLIENTE").toUpperCase();
 
   const [anchor, setAnchor] = useState<{ date: string; hour: number } | null>(null);
   const [selected, setSelected] = useState<CalendarRange | null>(null);
@@ -58,7 +59,7 @@ export default function WeeklyCalendar({
     const rows = (reservationsByDay[dateIso] || []).filter((reservation) => {
       const start = toHour(reservation.hora_inicio);
       const end = toHour(reservation.hora_fin);
-      return hour >= start && hour < end && reservation.estado !== "cancelada";
+      return hour >= start && hour < end && reservation.estado.toLowerCase() !== "cancelada";
     });
 
     const occupiedUnits = rows.reduce((sum, reservation) => {
@@ -87,7 +88,7 @@ export default function WeeklyCalendar({
     }
 
     const slotState = getSlotState(dateIso, hour);
-    if (slotState.isFull && role !== "club") {
+    if (slotState.isFull && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN") {
       return;
     }
 
@@ -102,7 +103,7 @@ export default function WeeklyCalendar({
     const startHour = Math.min(anchor.hour, hour);
     const endHour = Math.max(anchor.hour, hour) + 1;
 
-    if (role === "cliente" && endHour - startHour > 2) {
+    if (normalizedRole === "CLIENTE" && endHour - startHour > 2) {
       setWarning("Como cliente solo puedes reservar un maximo de 2 horas consecutivas.");
       return;
     }
@@ -148,9 +149,10 @@ export default function WeeklyCalendar({
               }
 
               if (slotState.isFull) {
-                cellClass = role === "club"
-                  ? "border-red-400/45 bg-red-500/25 text-red-100 hover:bg-red-500/35"
-                  : "border-red-400/45 bg-red-500/30 text-red-100";
+                cellClass =
+                  normalizedRole === "CLUB" || normalizedRole === "ADMIN"
+                    ? "border-red-400/45 bg-red-500/25 text-red-100 hover:bg-red-500/35"
+                    : "border-red-400/45 bg-red-500/30 text-red-100";
                 label = "Ocupado";
               }
 
@@ -172,8 +174,8 @@ export default function WeeklyCalendar({
               const title = partialEnabled
                 ? `Ocupacion ${slotState.occupiedUnits}/${capacity}`
                 : slotState.isFull
-                ? "Ocupado"
-                : "Disponible";
+                  ? "Ocupado"
+                  : "Disponible";
 
               return (
                 <button
@@ -181,7 +183,7 @@ export default function WeeklyCalendar({
                   type="button"
                   onClick={() => handleCellClick(dayIso, hour)}
                   className={`h-10 rounded-md border text-[11px] font-semibold transition ${cellClass}`}
-                  disabled={past || (slotState.isFull && role !== "club")}
+                  disabled={past || (slotState.isFull && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN")}
                   title={title}
                 >
                   {label}
