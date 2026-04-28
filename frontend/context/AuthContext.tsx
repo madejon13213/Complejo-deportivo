@@ -4,10 +4,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from "next/navigation";
 
 import { apiFetch, ApiError } from "@/lib/api";
-import { getUnreadNotifications, markNotificationRead } from "@/lib/services/notifications";
+import { getMyNotifications, markNotificationRead } from "@/lib/services/notifications";
 import { Notification } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 13 * 60 * 1000;
+const NOTIFICATIONS_POLLING_MS = 30 * 1000;
 
 interface AuthState {
   userId: string | null;
@@ -28,6 +29,7 @@ interface LoginPayload {
 
 interface AuthContextType extends AuthState {
   notifications: Notification[];
+  unreadNotificationsCount: number;
   login: (payload: LoginPayload) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -77,6 +79,7 @@ function parseRole(payload: LoginPayload): AuthState {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notificationsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshInFlightRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const [auth, setAuth] = useState<AuthState>(initialState);
@@ -86,6 +89,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (refreshTimerRef.current) {
       clearInterval(refreshTimerRef.current);
       refreshTimerRef.current = null;
+    }
+  }, []);
+
+  const stopNotificationsTimer = useCallback(() => {
+    if (notificationsTimerRef.current) {
+      clearInterval(notificationsTimerRef.current);
+      notificationsTimerRef.current = null;
     }
   }, []);
 
@@ -101,8 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const unread = await getUnreadNotifications();
-      setNotifications(unread);
+      const list = await getMyNotifications(25);
+      setNotifications(list);
     } catch {
       setNotifications([]);
     }
@@ -110,7 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const markNotificationAsRead = useCallback(async (notificationId: number) => {
     await markNotificationRead(notificationId);
-    setNotifications((prev) => prev.filter((notification) => notification.id !== notificationId));
+    setNotifications((prev) =>
+      prev.map((notification) =>
+        notification.id === notificationId ? { ...notification, leida: true } : notification
+      )
+    );
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
@@ -146,13 +160,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const performLogout = useCallback(async () => {
     stopRefreshTimer();
+    stopNotificationsTimer();
     try {
       await fetch("/api/users/logout", { method: "POST", credentials: "include" });
     } finally {
       clearLocalAuthState();
       router.push("/login");
     }
-  }, [clearLocalAuthState, router, stopRefreshTimer]);
+  }, [clearLocalAuthState, router, stopRefreshTimer, stopNotificationsTimer]);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -201,8 +216,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth.isAuthenticated, performLogout, refreshSession, stopRefreshTimer]);
 
   useEffect(() => {
+    if (!auth.isAuthenticated) {
+      stopNotificationsTimer();
+      return;
+    }
+
+    stopNotificationsTimer();
+    notificationsTimerRef.current = setInterval(() => {
+      void refreshNotifications();
+    }, NOTIFICATIONS_POLLING_MS);
+
+    return () => {
+      stopNotificationsTimer();
+    };
+  }, [auth.isAuthenticated, refreshNotifications, stopNotificationsTimer]);
+
+  useEffect(() => {
     const handleBeforeUnload = () => {
       stopRefreshTimer();
+      stopNotificationsTimer();
       setAuth((prev) => ({ ...prev, isAuthenticated: false, isReady: true }));
     };
 
@@ -210,14 +242,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [stopRefreshTimer]);
+  }, [stopRefreshTimer, stopNotificationsTimer]);
 
   useEffect(() => {
     return () => {
       isUnmountedRef.current = true;
       stopRefreshTimer();
+      stopNotificationsTimer();
     };
-  }, [stopRefreshTimer]);
+  }, [stopRefreshTimer, stopNotificationsTimer]);
 
   const login = useCallback((payload: LoginPayload) => {
     setAuth(parseRole(payload));
@@ -227,17 +260,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await performLogout();
   }, [performLogout]);
 
+  const unreadNotificationsCount = useMemo(
+    () => notifications.filter((notification) => !notification.leida).length,
+    [notifications]
+  );
+
   const value = useMemo(
     () => ({
       ...auth,
       notifications,
+      unreadNotificationsCount,
       login,
       logout,
       checkAuth,
       refreshNotifications,
       markNotificationAsRead,
     }),
-    [auth, notifications, login, logout, checkAuth, refreshNotifications, markNotificationAsRead]
+    [auth, notifications, unreadNotificationsCount, login, logout, checkAuth, refreshNotifications, markNotificationAsRead]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
