@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import DataTable from "@/app/components/Tables/DataTable";
 import Button from "@/app/components/UI/Button";
 import Toast from "@/app/components/UI/Toast";
@@ -45,8 +46,8 @@ export default function AdminUsuariosPage() {
     {
       key: "rol",
       header: "Rol",
-      render: (row: User) => row.rol || `rol-${row.id_rol || "n/a"}`,
-      searchable: (row: User) => row.rol || String(row.id_rol || ""),
+      render: (row: User) => row.rol || "CLIENTE",
+      searchable: (row: User) => row.rol || "CLIENTE",
     },
     {
       key: "acciones",
