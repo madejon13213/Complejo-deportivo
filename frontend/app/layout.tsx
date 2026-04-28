@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Manrope } from "next/font/google";
 
 import Footer from "@/app/components/Layout/Footer";
 import Header from "@/app/components/Layout/Header";
+import NotificationsBanner from "@/app/components/Layout/NotificationsBanner";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />
+            <NotificationsBanner />
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
