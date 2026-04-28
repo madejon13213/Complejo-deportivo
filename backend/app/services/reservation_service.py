@@ -5,6 +5,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.logger.logger_config import logger
 from app.repositories.reservation_repository import ReservationRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.reservation_schema import (
@@ -50,9 +51,11 @@ class ReservationService:
             reservations = repo.get_all()
             ReservationService._refresh_statuses(reservations)
             db.commit()
+            logger.info("[ReservationService.get_all_reservations] total=%s", len(reservations))
             return reservations
         except Exception:
             db.rollback()
+            logger.exception("[ReservationService.get_all_reservations] error")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar la lista de reservas de la base de datos",
@@ -91,6 +94,14 @@ class ReservationService:
             ]
 
             total_pages = max(1, ceil(total / limit)) if limit > 0 else 1
+            logger.info(
+                "[ReservationService.get_filtered_reservations] fecha=%s usuario=%s page=%s limit=%s total=%s",
+                fecha,
+                usuario,
+                page,
+                limit,
+                total,
+            )
             return ReservationSearchResponse(
                 items=items,
                 total=total,
@@ -100,6 +111,13 @@ class ReservationService:
             )
         except Exception:
             db.rollback()
+            logger.exception(
+                "[ReservationService.get_filtered_reservations] error fecha=%s usuario=%s page=%s limit=%s",
+                fecha,
+                usuario,
+                page,
+                limit,
+            )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar filtrar reservas",
@@ -111,17 +129,20 @@ class ReservationService:
         try:
             reservation = repo.get_by_id(reservation_id)
             if not reservation:
+                logger.warning("[ReservationService.get_reservation_by_id] not found reservation_id=%s", reservation_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
             ReservationService._refresh_statuses([reservation])
             db.commit()
+            logger.info("[ReservationService.get_reservation_by_id] found reservation_id=%s", reservation_id)
             return reservation
         except HTTPException:
             raise
         except Exception:
             db.rollback()
+            logger.exception("[ReservationService.get_reservation_by_id] error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar la reserva de la base de datos",
@@ -134,9 +155,11 @@ class ReservationService:
             reservations = repo.get_by_user(user_id)
             ReservationService._refresh_statuses(reservations)
             db.commit()
+            logger.info("[ReservationService.get_user_reservations] user_id=%s total=%s", user_id, len(reservations))
             return reservations
         except Exception:
             db.rollback()
+            logger.exception("[ReservationService.get_user_reservations] error user_id=%s", user_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar las reservas del usuario",
@@ -149,9 +172,11 @@ class ReservationService:
             reservations = repo.get_by_space(space_id)
             ReservationService._refresh_statuses(reservations)
             db.commit()
+            logger.info("[ReservationService.get_space_reservations] space_id=%s total=%s", space_id, len(reservations))
             return reservations
         except Exception:
             db.rollback()
+            logger.exception("[ReservationService.get_space_reservations] error space_id=%s", space_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar las reservas del espacio",
@@ -164,9 +189,11 @@ class ReservationService:
             reservations = repo.get_active()
             ReservationService._refresh_statuses(reservations)
             db.commit()
+            logger.info("[ReservationService.get_active_reservations] total=%s", len(reservations))
             return reservations
         except Exception:
             db.rollback()
+            logger.exception("[ReservationService.get_active_reservations] error")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar las reservas activas",
@@ -183,6 +210,15 @@ class ReservationService:
 
         try:
             role = normalize_role(actor_role)
+            logger.info(
+                "[ReservationService.create_reservation] start role=%s user_id=%s space_id=%s fecha=%s hora_inicio=%s hora_fin=%s",
+                role,
+                reservation_data.id_user,
+                reservation_data.id_espacio,
+                reservation_data.fecha,
+                reservation_data.hora_inicio,
+                reservation_data.hora_fin,
+            )
             conflicts = repo.get_conflicting_for_update(
                 space_id=reservation_data.id_espacio,
                 fecha_reserva=reservation_data.fecha,
@@ -191,7 +227,9 @@ class ReservationService:
             )
 
             if conflicts:
+                logger.info("[ReservationService.create_reservation] conflicts_found=%s", len(conflicts))
                 if not can_override_client_reservation(role):
+                    logger.warning("[ReservationService.create_reservation] conflict denied role=%s", role)
                     raise HTTPException(
                         status_code=status.HTTP_409_CONFLICT,
                         detail="La franja horaria ya está ocupada",
@@ -201,12 +239,22 @@ class ReservationService:
                     owner = user_repo.get_by_id(conflict.id_user)
                     owner_role = normalize_role(owner.rol_rel.rol if owner and owner.rol_rel else ROLE_CLIENTE)
                     if owner_role != ROLE_CLIENTE:
+                        logger.warning(
+                            "[ReservationService.create_reservation] cannot override owner_role=%s conflict_id=%s",
+                            owner_role,
+                            conflict.id,
+                        )
                         raise HTTPException(
                             status_code=status.HTTP_409_CONFLICT,
                             detail="No se puede sobrescribir una reserva de ADMIN o CLUB",
                         )
 
                     conflict.estado = "Cancelada"
+                    logger.info(
+                        "[ReservationService.create_reservation] conflict cancelled conflict_id=%s conflict_user_id=%s",
+                        conflict.id,
+                        conflict.id_user,
+                    )
                     NotificationService.create_notification(
                         db=db,
                         user_id=conflict.id_user,
@@ -228,12 +276,14 @@ class ReservationService:
             created_reservation = repo.create(new_reservation)
             db.commit()
             db.refresh(created_reservation)
+            logger.info("[ReservationService.create_reservation] created reservation_id=%s", created_reservation.id)
             return created_reservation
         except HTTPException:
             db.rollback()
             raise
         except Exception as e:
             db.rollback()
+            logger.exception("[ReservationService.create_reservation] error: %s", str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al crear la reserva: {str(e)}",
@@ -245,6 +295,7 @@ class ReservationService:
         try:
             reservation = repo.get_by_id(reservation_id)
             if not reservation:
+                logger.warning("[ReservationService.update_reservation] not found reservation_id=%s", reservation_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Reserva con ID {reservation_id} no encontrada",
@@ -261,11 +312,13 @@ class ReservationService:
             )
 
             updated_reservation = repo.update(reservation)
+            logger.info("[ReservationService.update_reservation] updated reservation_id=%s", reservation_id)
             return updated_reservation
         except HTTPException:
             raise
         except Exception as e:
             db.rollback()
+            logger.exception("[ReservationService.update_reservation] error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al actualizar la reserva: {str(e)}",
@@ -277,6 +330,7 @@ class ReservationService:
         try:
             reservation = repo.get_by_id(reservation_id)
             if not reservation:
+                logger.warning("[ReservationService.delete_reservation] not found reservation_id=%s", reservation_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Reserva con ID {reservation_id} no encontrada",
@@ -284,8 +338,10 @@ class ReservationService:
 
             deleted = repo.delete(reservation)
             if deleted:
+                logger.info("[ReservationService.delete_reservation] deleted reservation_id=%s", reservation_id)
                 return {"message": f"Reserva con ID {reservation_id} eliminada exitosamente"}
 
+            logger.error("[ReservationService.delete_reservation] delete failed reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="No se pudo eliminar la reserva",
@@ -293,6 +349,7 @@ class ReservationService:
         except HTTPException:
             raise
         except Exception as e:
+            logger.exception("[ReservationService.delete_reservation] error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al eliminar la reserva: {str(e)}",
