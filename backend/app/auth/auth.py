@@ -1,14 +1,16 @@
 import os
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
+
+import bcrypt
 import jwt
 import redis
-import bcrypt
-from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, Response, status, Request
+from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import APIKeyCookie
-from typing import Dict, Any
 from sqlalchemy.orm import Session
 
-# Configuracion de Redis
+from app.utils.roles import ROLE_ADMIN, ROLE_CLUB, normalize_role, role_from_payload
+
 redis_client = redis.Redis(
     host=os.getenv("REDIS_HOST", "redis"),
     port=int(os.getenv("REDIS_PORT", 6379)),
@@ -75,10 +77,13 @@ class AuthManager:
             to_encode["sub"] = str(to_encode["id"])
 
         expire = datetime.now(timezone.utc) + timedelta(minutes=AuthManager.ACCESS_TOKEN_EXPIRE_MINUTES)
-        to_encode.update({
-            "exp": int(expire.timestamp()),
-            "type": "access",
-        })
+        to_encode.update(
+            {
+                "exp": int(expire.timestamp()),
+                "type": "access",
+                "rol": normalize_role(to_encode.get("rol")),
+            }
+        )
         return jwt.encode(to_encode, AuthManager.SECRET_KEY, algorithm=AuthManager.ALGORITHM)
 
     @staticmethod
@@ -124,31 +129,6 @@ class AuthManager:
         )
 
     @staticmethod
-    def login(email: str, input_pass: str, db: Session, response: Response) -> Dict[str, Any]:
-        from app.tables.tables import Usuario
-
-        user = db.query(Usuario).filter(Usuario.email == email).first()
-
-        if not user or not bcrypt.checkpw(input_pass.encode("utf-8"), user.contraseña.encode("utf-8")):
-            return {"error": "Email o contraseña incorrectos"}
-
-        rol_nombre = user.rol_rel.rol.lower() if (hasattr(user, "rol_rel") and user.rol_rel) else "cliente"
-
-        access_token = AuthManager.create_access_token({
-            "id": user.id,
-            "name": user.nombre,
-            "rol": rol_nombre,
-        })
-        refresh_token = AuthManager.create_refresh_token(user.id)
-
-        AuthManager._set_auth_cookies(response, access_token, refresh_token)
-
-        return {
-            "success": True,
-            "user": {"id": user.id, "name": user.nombre, "rol": rol_nombre},
-        }
-
-    @staticmethod
     def refresh_access_token(request: Request, response: Response, db: Session) -> dict:
         refresh_token = request.cookies.get("refresh_token")
 
@@ -170,13 +150,15 @@ class AuthManager:
         if not user:
             raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
-        rol_nombre = user.rol_rel.rol.lower() if (hasattr(user, "rol_rel") and user.rol_rel) else "cliente"
+        rol_nombre = normalize_role(user.rol_rel.rol if user.rol_rel else "CLIENTE")
 
-        new_access = AuthManager.create_access_token({
-            "id": user.id,
-            "name": user.nombre,
-            "rol": rol_nombre,
-        })
+        new_access = AuthManager.create_access_token(
+            {
+                "id": user.id,
+                "name": user.nombre,
+                "rol": rol_nombre,
+            }
+        )
 
         is_production = os.getenv("ENVIRONMENT", "development") != "development"
         response.set_cookie(
@@ -234,13 +216,13 @@ class AuthManager:
             raise HTTPException(status_code=401, detail="No hay cookie de sesion")
 
         payload = AuthManager._decode_token(token, expected_type="access")
+        payload["rol"] = role_from_payload(payload)
         return payload
 
     @staticmethod
     async def get_current_admin(current_user: dict = Depends(get_current_user)):
-        """Verifica que el usuario este logueado y sea ADMIN"""
-        rol = current_user.get("rol", "").lower()
-        if rol not in ["admin", "administrador"]:
+        rol = normalize_role(current_user.get("rol", ""))
+        if rol != ROLE_ADMIN:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Acceso denegado: Se requieren permisos de Administrador",
@@ -249,9 +231,8 @@ class AuthManager:
 
     @staticmethod
     async def get_current_club(current_user: dict = Depends(get_current_user)):
-        """Verifica que el usuario este logueado y sea CLUB (o Admin)"""
-        rol = current_user.get("rol", "").lower()
-        if rol not in ["club", "admin", "administrador"]:
+        rol = normalize_role(current_user.get("rol", ""))
+        if rol not in [ROLE_CLUB, ROLE_ADMIN]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Acceso denegado: Se requieren permisos de Club",
