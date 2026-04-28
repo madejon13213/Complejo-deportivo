@@ -2,7 +2,10 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { apiFetch, ApiError } from "@/lib/api";
+import { getUnreadNotifications, markNotificationRead } from "@/lib/services/notifications";
+import { Notification } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 
@@ -19,15 +22,17 @@ interface AuthState {
 interface LoginPayload {
   id?: number | string;
   sub?: number | string;
-  id_rol?: number;
   rol?: string;
   role?: string;
 }
 
 interface AuthContextType extends AuthState {
+  notifications: Notification[];
   login: (payload: LoginPayload) => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+  markNotificationAsRead: (notificationId: number) => Promise<void>;
 }
 
 const initialState: AuthState = {
@@ -42,12 +47,18 @@ const initialState: AuthState = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function normalizeRole(roleValue?: string | null): string {
+  const value = (roleValue || "").trim().toUpperCase();
+  if (value === "ADMINISTRADOR") return "ADMIN";
+  if (value === "ADMIN") return "ADMIN";
+  if (value === "CLUB") return "CLUB";
+  return "CLIENTE";
+}
+
 function resolveRole(payload: LoginPayload): string {
-  if (payload.rol) return payload.rol.toLowerCase().trim();
-  if (payload.role) return payload.role.toLowerCase().trim();
-  if (payload.id_rol === 1) return "administrador";
-  if (payload.id_rol === 3) return "club";
-  return "cliente";
+  if (payload.rol) return normalizeRole(payload.rol);
+  if (payload.role) return normalizeRole(payload.role);
+  return "CLIENTE";
 }
 
 function parseRole(payload: LoginPayload): AuthState {
@@ -55,9 +66,9 @@ function parseRole(payload: LoginPayload): AuthState {
   return {
     userId: String(payload.id ?? payload.sub ?? ""),
     role,
-    isAdmin: role === "administrador" || role === "admin",
-    isCliente: role === "cliente",
-    isClub: role === "club",
+    isAdmin: role === "ADMIN",
+    isCliente: role === "CLIENTE",
+    isClub: role === "CLUB",
     isAuthenticated: true,
     isReady: true,
   };
@@ -69,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshInFlightRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const [auth, setAuth] = useState<AuthState>(initialState);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const stopRefreshTimer = useCallback(() => {
     if (refreshTimerRef.current) {
@@ -79,6 +91,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const clearLocalAuthState = useCallback(() => {
     setAuth({ ...initialState, isReady: true });
+    setNotifications([]);
+  }, []);
+
+  const refreshNotifications = useCallback(async () => {
+    if (!auth.isAuthenticated) {
+      setNotifications([]);
+      return;
+    }
+
+    try {
+      const unread = await getUnreadNotifications();
+      setNotifications(unread);
+    } catch {
+      setNotifications([]);
+    }
+  }, [auth.isAuthenticated]);
+
+  const markNotificationAsRead = useCallback(async (notificationId: number) => {
+    await markNotificationRead(notificationId);
+    setNotifications((prev) => prev.filter((notification) => notification.id !== notificationId));
   }, []);
 
   const refreshSession = useCallback(async (): Promise<boolean> => {
@@ -144,6 +176,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [checkAuth]);
 
   useEffect(() => {
+    if (auth.isAuthenticated) {
+      void refreshNotifications();
+    }
+  }, [auth.isAuthenticated, refreshNotifications]);
+
+  useEffect(() => {
     if (!auth.isAuthenticated) {
       stopRefreshTimer();
       return;
@@ -165,7 +203,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       stopRefreshTimer();
-      // Solo limpiamos estado local en memoria; no invalidamos refresh_token al cerrar pestaña.
       setAuth((prev) => ({ ...prev, isAuthenticated: false, isReady: true }));
     };
 
@@ -190,7 +227,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await performLogout();
   }, [performLogout]);
 
-  const value = useMemo(() => ({ ...auth, login, logout, checkAuth }), [auth, login, logout, checkAuth]);
+  const value = useMemo(
+    () => ({
+      ...auth,
+      notifications,
+      login,
+      logout,
+      checkAuth,
+      refreshNotifications,
+      markNotificationAsRead,
+    }),
+    [auth, notifications, login, logout, checkAuth, refreshNotifications, markNotificationAsRead]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
