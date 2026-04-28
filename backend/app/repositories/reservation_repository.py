@@ -101,3 +101,8 @@ class ReservationRepository(BaseRepository):
         self.db.delete(reserva)
         self.db.commit()
         return True
+
+    def delete_by_id(self, reservation_id: int) -> bool:
+        rows = self.db.query(Reserva).filter(Reserva.id == reservation_id).delete(synchronize_session=False)
+        self.db.commit()
+        return rows > 0
