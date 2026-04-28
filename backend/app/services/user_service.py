@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app.auth.auth import AuthManager
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserLogin, UserRegister
-from app.tables.tables import Usuario
+from app.tables.tables import Rol, Usuario
+from app.utils.roles import ROLE_CLIENTE, normalize_role
 
 
 class UserService:
@@ -21,6 +22,13 @@ class UserService:
                 detail="El email ya está registrado",
             )
 
+        role_type = normalize_role(user_data.rol)
+        role_record = db.query(Rol).filter(Rol.rol.ilike(role_type)).first()
+        if not role_record:
+            role_record = db.query(Rol).filter(Rol.rol.ilike(ROLE_CLIENTE)).first()
+        if not role_record:
+            raise HTTPException(status_code=400, detail="Rol no válido")
+
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(user_data.password.encode("utf-8"), salt).decode("utf-8")
 
@@ -31,7 +39,7 @@ class UserService:
             email=user_data.email,
             contraseña=hashed_password,
             telefono=user_data.telefono,
-            id_rol=user_data.id_rol,
+            id_rol=role_record.id,
         )
 
         try:
@@ -39,6 +47,7 @@ class UserService:
             return {
                 "id": nuevo_usuario.id,
                 "email": nuevo_usuario.email,
+                "rol": role_type,
                 "mensaje": "Usuario creado exitosamente",
             }
         except IntegrityError:
@@ -61,7 +70,7 @@ class UserService:
                 detail="Email o contraseña incorrectos",
             )
 
-        rol_nombre = usuario.rol_rel.rol.lower() if usuario.rol_rel else "cliente"
+        rol_nombre = normalize_role(usuario.rol_rel.rol if usuario.rol_rel else ROLE_CLIENTE)
 
         access_token = AuthManager.create_access_token(
             {"id": usuario.id, "name": usuario.nombre, "rol": rol_nombre}
@@ -83,7 +92,11 @@ class UserService:
     def get_all_users(db: Session):
         repo = UserRepository(db)
         try:
-            return repo.get_all()
+            users = repo.get_all()
+            for user in users:
+                if user.rol_rel:
+                    user.rol = normalize_role(user.rol_rel.rol)
+            return users
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -102,6 +115,8 @@ class UserService:
                     detail=f"Usuario con ID {user_id} no encontrado",
                 )
 
+            if usuario.rol_rel:
+                usuario.rol = normalize_role(usuario.rol_rel.rol)
             return usuario
         except HTTPException as http_exc:
             raise http_exc
