@@ -1,4 +1,4 @@
-export type UserRole = "cliente" | "club" | "administrador" | "admin" | string;
+export type UserRole = "CLIENTE" | "CLUB" | "ADMIN" | string;
 
 export interface User {
   id: number;
@@ -7,8 +7,17 @@ export interface User {
   seg_ape?: string | null;
   email: string;
   telefono?: string | null;
-  id_rol?: number;
   rol?: UserRole;
+}
+
+export interface Notification {
+  id: number;
+  tipo: string;
+  mensaje: string;
+  leida: boolean;
+  creada_en: string;
+  id_user: number;
+  id_reserva?: number | null;
 }
 
 export interface Reservation {
