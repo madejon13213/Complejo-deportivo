@@ -328,6 +328,17 @@ class ReservationService:
     def delete_reservation(reservation_id: int, db: Session) -> dict:
         repo = ReservationRepository(db)
         try:
+            pending_new = len(db.new)
+            pending_dirty = len(db.dirty)
+            if pending_new or pending_dirty:
+                logger.warning(
+                    "[ReservationService.delete_reservation] pending session state before delete reservation_id=%s new=%s dirty=%s; rollback to clean",
+                    reservation_id,
+                    pending_new,
+                    pending_dirty,
+                )
+                db.rollback()
+
             reservation = repo.get_by_id(reservation_id)
             if not reservation:
                 logger.warning("[ReservationService.delete_reservation] not found reservation_id=%s", reservation_id)
@@ -336,12 +347,12 @@ class ReservationService:
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
 
-            deleted = repo.delete(reservation)
+            deleted = repo.delete_by_id(reservation_id)
             if deleted:
                 logger.info("[ReservationService.delete_reservation] deleted reservation_id=%s", reservation_id)
                 return {"message": f"Reserva con ID {reservation_id} eliminada exitosamente"}
 
-            logger.error("[ReservationService.delete_reservation] delete failed reservation_id=%s", reservation_id)
+            logger.error("[ReservationService.delete_reservation] delete_by_id returned false reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="No se pudo eliminar la reserva",
@@ -349,6 +360,7 @@ class ReservationService:
         except HTTPException:
             raise
         except Exception as e:
+            db.rollback()
             logger.exception("[ReservationService.delete_reservation] error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
