@@ -9,6 +9,7 @@ from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import APIKeyCookie
 from sqlalchemy.orm import Session
 
+from app.logger.logger_config import logger
 from app.utils.roles import ROLE_ADMIN, ROLE_CLUB, normalize_role, role_from_payload
 
 redis_client = redis.Redis(
@@ -57,15 +58,23 @@ class AuthManager:
         try:
             payload = jwt.decode(token, AuthManager.SECRET_KEY, algorithms=[AuthManager.ALGORITHM])
         except jwt.ExpiredSignatureError:
+            logger.warning("[AuthManager._decode_token] token expirado expected_type=%s", expected_type)
             raise HTTPException(status_code=401, detail="Token expirado")
         except jwt.PyJWTError:
+            logger.warning("[AuthManager._decode_token] token inválido expected_type=%s", expected_type)
             raise HTTPException(status_code=401, detail="Token invalido")
 
         token_type = payload.get("type")
         if token_type != expected_type:
+            logger.warning(
+                "[AuthManager._decode_token] tipo inválido expected=%s got=%s",
+                expected_type,
+                token_type,
+            )
             raise HTTPException(status_code=401, detail="Tipo de token invalido")
 
         if AuthManager._is_blacklisted(token):
+            logger.warning("[AuthManager._decode_token] token revocado expected_type=%s", expected_type)
             raise HTTPException(status_code=401, detail="Token revocado")
 
         return payload
@@ -131,23 +140,28 @@ class AuthManager:
     @staticmethod
     def refresh_access_token(request: Request, response: Response, db: Session) -> dict:
         refresh_token = request.cookies.get("refresh_token")
+        logger.info("[AuthManager.refresh_access_token] intento refresh")
 
         if not refresh_token:
+            logger.warning("[AuthManager.refresh_access_token] sin refresh_token")
             raise HTTPException(status_code=401, detail="No hay token de refresco")
 
         payload = AuthManager._decode_token(refresh_token, expected_type="refresh")
 
         stored_user_id = redis_client.get(f"refresh:{refresh_token}")
         if not stored_user_id:
+            logger.warning("[AuthManager.refresh_access_token] refresh no existe en redis")
             raise HTTPException(status_code=401, detail="Refresh token invalido o expirado en servidor")
 
         if str(payload.get("sub")) != str(stored_user_id):
+            logger.warning("[AuthManager.refresh_access_token] sub no coincide stored_user_id=%s", stored_user_id)
             raise HTTPException(status_code=401, detail="Refresh token no coincide con la sesion")
 
         from app.tables.tables import Usuario
 
         user = db.query(Usuario).filter(Usuario.id == int(stored_user_id)).first()
         if not user:
+            logger.warning("[AuthManager.refresh_access_token] usuario no encontrado user_id=%s", stored_user_id)
             raise HTTPException(status_code=401, detail="Usuario no encontrado")
 
         rol_nombre = normalize_role(user.rol_rel.rol if user.rol_rel else "CLIENTE")
@@ -171,6 +185,7 @@ class AuthManager:
             path="/",
         )
 
+        logger.info("[AuthManager.refresh_access_token] refresh ok user_id=%s rol=%s", user.id, rol_nombre)
         return {"status": "Access token actualizado", "newToken": new_access}
 
     @staticmethod
@@ -188,7 +203,7 @@ class AuthManager:
                 )
                 AuthManager._blacklist_token_with_payload(token, payload)
             except jwt.PyJWTError:
-                pass
+                logger.warning("[AuthManager.logout] access token inválido al cerrar sesión")
 
         if refresh:
             try:
@@ -200,12 +215,13 @@ class AuthManager:
                 )
                 AuthManager._blacklist_token_with_payload(refresh, payload)
             except jwt.PyJWTError:
-                pass
+                logger.warning("[AuthManager.logout] refresh token inválido al cerrar sesión")
 
             redis_client.delete(f"refresh:{refresh}")
 
         response.delete_cookie("token", path="/")
         response.delete_cookie("refresh_token", path="/")
+        logger.info("[AuthManager.logout] sesión cerrada")
         return {"message": "Sesion cerrada"}
 
     @staticmethod
@@ -213,16 +229,23 @@ class AuthManager:
         token = request.cookies.get("token")
 
         if not token:
+            logger.warning("[AuthManager.get_current_user] sin cookie token")
             raise HTTPException(status_code=401, detail="No hay cookie de sesion")
 
         payload = AuthManager._decode_token(token, expected_type="access")
         payload["rol"] = role_from_payload(payload)
+        logger.info(
+            "[AuthManager.get_current_user] user_id=%s rol=%s",
+            payload.get("id") or payload.get("sub"),
+            payload.get("rol"),
+        )
         return payload
 
     @staticmethod
     async def get_current_admin(current_user: dict = Depends(get_current_user)):
         rol = normalize_role(current_user.get("rol", ""))
         if rol != ROLE_ADMIN:
+            logger.warning("[AuthManager.get_current_admin] acceso denegado rol=%s", rol)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Acceso denegado: Se requieren permisos de Administrador",
@@ -233,6 +256,7 @@ class AuthManager:
     async def get_current_club(current_user: dict = Depends(get_current_user)):
         rol = normalize_role(current_user.get("rol", ""))
         if rol not in [ROLE_CLUB, ROLE_ADMIN]:
+            logger.warning("[AuthManager.get_current_club] acceso denegado rol=%s", rol)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Acceso denegado: Se requieren permisos de Club",
