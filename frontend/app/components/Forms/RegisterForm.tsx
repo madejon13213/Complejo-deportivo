@@ -2,8 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import { Mail, Phone, User, UserPlus } from "lucide-react";
-import Input from "@/app/components/UI/Input";
+
 import Button from "@/app/components/UI/Button";
+import Input from "@/app/components/UI/Input";
 import Toast from "@/app/components/UI/Toast";
 import { apiFetch } from "@/lib/api";
 
@@ -14,7 +15,7 @@ interface RegisterPayload {
   email: string;
   password: string;
   telefono: string;
-  id_rol: number;
+  rol: string;
 }
 
 export default function RegisterForm() {
@@ -25,13 +26,13 @@ export default function RegisterForm() {
     email: "",
     password: "",
     telefono: "",
-    id_rol: 2,
+    rol: "CLIENTE",
   });
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const update = (key: keyof RegisterPayload, value: string | number) => {
+  const update = (key: keyof RegisterPayload, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
