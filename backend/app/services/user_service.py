@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.auth.auth import AuthManager
+from app.logger.logger_config import logger
 from app.repositories.user_repository import UserRepository
 from app.schemas.user_schema import UserLogin, UserRegister
 from app.tables.tables import Rol, Usuario
@@ -17,6 +18,7 @@ class UserService:
 
         existing_user = repo.get_by_email(user_data.email)
         if existing_user:
+            logger.warning("[UserService.register_user] email already exists email=%s", user_data.email)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El email ya está registrado",
@@ -27,6 +29,7 @@ class UserService:
         if not role_record:
             role_record = db.query(Rol).filter(Rol.rol.ilike(ROLE_CLIENTE)).first()
         if not role_record:
+            logger.error("[UserService.register_user] role not valid role_type=%s", role_type)
             raise HTTPException(status_code=400, detail="Rol no válido")
 
         salt = bcrypt.gensalt()
@@ -44,6 +47,7 @@ class UserService:
 
         try:
             repo.create(nuevo_usuario)
+            logger.info("[UserService.register_user] created user_id=%s role=%s", nuevo_usuario.id, role_type)
             return {
                 "id": nuevo_usuario.id,
                 "email": nuevo_usuario.email,
@@ -52,6 +56,7 @@ class UserService:
             }
         except IntegrityError:
             db.rollback()
+            logger.exception("[UserService.register_user] integrity error email=%s", user_data.email)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al guardar el usuario en la base de datos",
@@ -65,6 +70,7 @@ class UserService:
         if not usuario or not bcrypt.checkpw(
             login_data.password.encode("utf-8"), usuario.contraseña.encode("utf-8")
         ):
+            logger.warning("[UserService.login_user] invalid credentials email=%s", login_data.email)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Email o contraseña incorrectos",
@@ -78,6 +84,7 @@ class UserService:
         refresh_token = AuthManager.create_refresh_token(usuario.id)
 
         AuthManager._set_auth_cookies(response, access_token, refresh_token)
+        logger.info("[UserService.login_user] success user_id=%s role=%s", usuario.id, rol_nombre)
 
         return {
             "success": True,
@@ -95,8 +102,10 @@ class UserService:
             users = repo.get_all()
             for user in users:
                 user.rol = normalize_role(user.rol_rel.rol if user.rol_rel else ROLE_CLIENTE)
+            logger.info("[UserService.get_all_users] total=%s", len(users))
             return users
         except Exception:
+            logger.exception("[UserService.get_all_users] error")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar la lista de usuarios de la base de datos",
@@ -109,16 +118,19 @@ class UserService:
             usuario = repo.get_by_id(user_id)
 
             if not usuario:
+                logger.warning("[UserService.get_user] not found user_id=%s", user_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Usuario con ID {user_id} no encontrado",
                 )
 
             usuario.rol = normalize_role(usuario.rol_rel.rol if usuario.rol_rel else ROLE_CLIENTE)
+            logger.info("[UserService.get_user] found user_id=%s", user_id)
             return usuario
         except HTTPException as http_exc:
             raise http_exc
         except Exception:
+            logger.exception("[UserService.get_user] error user_id=%s", user_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ocurrió un error interno al intentar recuperar el usuario",
@@ -131,16 +143,19 @@ class UserService:
             usuario = repo.get_by_id(user_id)
 
             if not usuario:
+                logger.warning("[UserService.delete_user] not found user_id=%s", user_id)
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Usuario con ID {user_id} no encontrado",
                 )
 
             repo.delete(usuario)
+            logger.info("[UserService.delete_user] deleted user_id=%s", user_id)
             return {"mensaje": f"Usuario con ID {user_id} eliminado exitosamente"}
         except HTTPException as http_exc:
             raise http_exc
         except Exception:
+            logger.exception("[UserService.delete_user] error user_id=%s", user_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Ocurrió un error interno al intentar eliminar el usuario",
