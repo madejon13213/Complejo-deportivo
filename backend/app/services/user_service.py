@@ -94,8 +94,7 @@ class UserService:
         try:
             users = repo.get_all()
             for user in users:
-                if user.rol_rel:
-                    user.rol = normalize_role(user.rol_rel.rol)
+                user.rol = normalize_role(user.rol_rel.rol if user.rol_rel else ROLE_CLIENTE)
             return users
         except Exception:
             raise HTTPException(
@@ -115,8 +114,7 @@ class UserService:
                     detail=f"Usuario con ID {user_id} no encontrado",
                 )
 
-            if usuario.rol_rel:
-                usuario.rol = normalize_role(usuario.rol_rel.rol)
+            usuario.rol = normalize_role(usuario.rol_rel.rol if usuario.rol_rel else ROLE_CLIENTE)
             return usuario
         except HTTPException as http_exc:
             raise http_exc
