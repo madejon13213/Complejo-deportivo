@@ -1,7 +1,8 @@
 import logging
 import os
-from logging.handlers import RotatingFileHandler
 import sys
+from logging.handlers import RotatingFileHandler
+
 
 def setup_app_logging():
     # 1. Crear la carpeta de logs si no existe
@@ -17,7 +18,7 @@ def setup_app_logging():
     # Incluye: Fecha | Nivel | Nombre del archivo | Mensaje
     formatter = logging.Formatter(
         "%(asctime)s | %(levelname)s | [%(filename)s:%(lineno)d] | %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # 4. Configurar el RotatingFileHandler
@@ -25,10 +26,10 @@ def setup_app_logging():
     # - maxBytes: 5MB (5 * 1024 * 1024) por archivo
     # - backupCount: Guardará hasta 5 archivos antiguos (app.log.1, app.log.2, etc.)
     file_handler = RotatingFileHandler(
-        os.path.join(log_dir, "pmo.log"), 
-        maxBytes=5*1024*1024, 
+        os.path.join(log_dir, "pmo.log"),
+        maxBytes=5 * 1024 * 1024,
         backupCount=5,
-        encoding="utf-8"
+        encoding="utf-8",
     )
     file_handler.setFormatter(formatter)
 
@@ -42,6 +43,7 @@ def setup_app_logging():
         logger.addHandler(console_handler)
 
     return logger
-1
+
+
 # Exportamos la instancia única
 logger = setup_app_logging()
