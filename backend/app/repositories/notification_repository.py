@@ -16,6 +16,15 @@ class NotificationRepository(BaseRepository):
             .all()
         )
 
+    def get_by_user(self, user_id: int, limit: int = 25) -> list[Notificacion]:
+        return (
+            self.db.query(Notificacion)
+            .filter(Notificacion.id_user == user_id)
+            .order_by(Notificacion.creada_en.desc(), Notificacion.id.desc())
+            .limit(limit)
+            .all()
+        )
+
     def mark_as_read(self, notification_id: int, user_id: int) -> Notificacion | None:
         notification = (
             self.db.query(Notificacion)
