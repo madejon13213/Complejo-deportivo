@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.auth import AuthManager
 from app.database import get_db
+from app.logger.logger_config import logger
 from app.schemas.notification_schema import NotificationMarkReadRequest, NotificationResponse
 from app.services.notification_service import NotificationService
 
@@ -17,6 +18,7 @@ def get_unread_notifications(
     db: Session = Depends(get_db),
 ):
     user_id = int(current_user.get("id") or current_user.get("sub"))
+    logger.info("[notification_router.get_unread_notifications] user_id=%s", user_id)
     return NotificationService.get_unread_notifications(db=db, user_id=user_id)
 
 
@@ -27,6 +29,11 @@ def mark_notification_read(
     db: Session = Depends(get_db),
 ):
     user_id = int(current_user.get("id") or current_user.get("sub"))
+    logger.info(
+        "[notification_router.mark_notification_read] user_id=%s notification_id=%s",
+        user_id,
+        payload.notification_id,
+    )
     return NotificationService.mark_notification_as_read(
         db=db,
         user_id=user_id,
