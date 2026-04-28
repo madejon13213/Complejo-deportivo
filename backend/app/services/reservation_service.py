@@ -219,6 +219,7 @@ class ReservationService:
                 reservation_data.hora_inicio,
                 reservation_data.hora_fin,
             )
+
             conflicts = repo.get_conflicting_for_update(
                 space_id=reservation_data.id_espacio,
                 fecha_reserva=reservation_data.fecha,
@@ -283,7 +284,7 @@ class ReservationService:
             raise
         except Exception as e:
             db.rollback()
-            logger.exception("[ReservationService.create_reservation] error: %s", str(e))
+            logger.exception("[ReservationService.create_reservation] transactional error: %s", str(e))
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al crear la reserva: {str(e)}",
@@ -312,13 +313,15 @@ class ReservationService:
             )
 
             updated_reservation = repo.update(reservation)
+            db.commit()
+            db.refresh(updated_reservation)
             logger.info("[ReservationService.update_reservation] updated reservation_id=%s", reservation_id)
             return updated_reservation
         except HTTPException:
             raise
         except Exception as e:
             db.rollback()
-            logger.exception("[ReservationService.update_reservation] error reservation_id=%s", reservation_id)
+            logger.exception("[ReservationService.update_reservation] transactional error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al actualizar la reserva: {str(e)}",
@@ -349,6 +352,7 @@ class ReservationService:
 
             deleted = repo.delete_by_id(reservation_id)
             if deleted:
+                db.commit()
                 logger.info("[ReservationService.delete_reservation] deleted reservation_id=%s", reservation_id)
                 return {"message": f"Reserva con ID {reservation_id} eliminada exitosamente"}
 
@@ -361,7 +365,7 @@ class ReservationService:
             raise
         except Exception as e:
             db.rollback()
-            logger.exception("[ReservationService.delete_reservation] error reservation_id=%s", reservation_id)
+            logger.exception("[ReservationService.delete_reservation] transactional error reservation_id=%s", reservation_id)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Error al eliminar la reserva: {str(e)}",
