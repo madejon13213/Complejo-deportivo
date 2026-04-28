@@ -93,16 +93,15 @@ class ReservationRepository(BaseRepository):
 
     def update(self, reserva: Reserva) -> Reserva:
         self.db.merge(reserva)
-        self.db.commit()
-        self.db.refresh(reserva)
+        self.db.flush()
         return reserva
 
     def delete(self, reserva: Reserva) -> bool:
         self.db.delete(reserva)
-        self.db.commit()
+        self.db.flush()
         return True
 
     def delete_by_id(self, reservation_id: int) -> bool:
         rows = self.db.query(Reserva).filter(Reserva.id == reservation_id).delete(synchronize_session=False)
-        self.db.commit()
+        self.db.flush()
         return rows > 0
