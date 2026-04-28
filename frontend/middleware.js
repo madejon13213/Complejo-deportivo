@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import * as jose from "jose";
 
 const ROLE_PERMISSIONS = {
-  "/admin": ["administrador", "admin"],
-  "/dashboard": ["cliente", "club", "administrador", "admin"],
-  "/reservas": ["cliente", "club", "administrador", "admin"],
-  "/reservations": ["cliente", "club", "administrador", "admin"],
-  "/courts": ["cliente", "club", "administrador", "admin"],
-  "/spaces": ["cliente", "club", "administrador", "admin"],
-  "/profile": ["cliente", "club", "administrador", "admin"],
-  "/penalties": ["cliente", "club", "administrador", "admin"],
-  "/getAllUsers": ["administrador", "admin"],
+  "/admin": ["ADMIN"],
+  "/dashboard": ["CLIENTE", "CLUB", "ADMIN"],
+  "/reservas": ["CLIENTE", "CLUB", "ADMIN"],
+  "/reservations": ["CLIENTE", "CLUB", "ADMIN"],
+  "/courts": ["CLIENTE", "CLUB", "ADMIN"],
+  "/spaces": ["CLIENTE", "CLUB", "ADMIN"],
+  "/profile": ["CLIENTE", "CLUB", "ADMIN"],
+  "/penalties": ["CLIENTE", "CLUB", "ADMIN"],
+  "/getAllUsers": ["ADMIN"],
 };
 
 const PUBLIC_ROUTES = ["/", "/auth", "/login", "/register"];
@@ -25,12 +25,15 @@ function getProtectedPath(pathname) {
     .find((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
+function normalizeRole(roleValue) {
+  const value = (roleValue || "").toString().trim().toUpperCase();
+  if (value === "ADMIN" || value === "ADMINISTRADOR") return "ADMIN";
+  if (value === "CLUB") return "CLUB";
+  return "CLIENTE";
+}
+
 function resolveRoleFromPayload(payload) {
-  const value = (payload.rol || payload.role || "").toLowerCase().trim();
-  if (value) return value;
-  if (payload.id_rol === 1) return "administrador";
-  if (payload.id_rol === 3) return "club";
-  return "cliente";
+  return normalizeRole(payload.rol || payload.role);
 }
 
 async function tryRefresh(request) {
