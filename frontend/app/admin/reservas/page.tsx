@@ -208,6 +208,7 @@ export default function AdminReservasPage() {
                 <th className="px-4 py-3">Espacio</th>
                 <th className="px-4 py-3">Usuario</th>
                 <th className="px-4 py-3">Franja</th>
+                <th className="px-4 py-3">Total</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Acciones</th>
               </tr>
@@ -215,7 +216,7 @@ export default function AdminReservasPage() {
             <tbody>
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td className="px-4 py-4 text-gray-400" colSpan={6}>No hay reservas para los filtros aplicados.</td>
+                  <td className="px-4 py-4 text-gray-400" colSpan={7}>No hay reservas para los filtros aplicados.</td>
                 </tr>
               )}
 
@@ -229,6 +230,7 @@ export default function AdminReservasPage() {
                     <td className="px-4 py-3">{row.id_espacio}</td>
                     <td className="px-4 py-3">{row.usuario_nombre}</td>
                     <td className="px-4 py-3">{row.fecha} · {row.hora_inicio} - {row.hora_fin}</td>
+                    <td className="px-4 py-3">{Number(row.precio_total || 0).toFixed(2)} €</td>
                     <td className="px-4 py-3">{row.estado}</td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
