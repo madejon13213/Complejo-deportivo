@@ -30,6 +30,7 @@ export interface Reservation {
   estado: string;
   plazas_parciales?: number | null;
   tipo_reserva: string;
+  precio_total: number;
   courtName?: string;
   userName?: string;
 }
@@ -39,6 +40,7 @@ export interface ReservationCreatePayload {
   hora_inicio: string;
   hora_fin: string;
   plazas_parciales?: number | null;
+  numero_personas?: number | null;
   tipo_reserva: string;
   id_user: number;
   id_espacio: number;
