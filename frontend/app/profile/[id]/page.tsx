@@ -50,6 +50,7 @@ export default function AdminUserProfilePage() {
                 <th className="px-3 py-2">Espacio</th>
                 <th className="px-3 py-2">Fecha</th>
                 <th className="px-3 py-2">Hora</th>
+                <th className="px-3 py-2">Total</th>
                 <th className="px-3 py-2">Estado</th>
               </tr>
             </thead>
@@ -60,6 +61,7 @@ export default function AdminUserProfilePage() {
                   <td className="px-3 py-2">{reservation.id_espacio}</td>
                   <td className="px-3 py-2">{reservation.fecha}</td>
                   <td className="px-3 py-2">{reservation.hora_inicio} - {reservation.hora_fin}</td>
+                  <td className="px-3 py-2">{Number(reservation.precio_total || 0).toFixed(2)} €</td>
                   <td className="px-3 py-2">{reservation.estado}</td>
                 </tr>
               ))}
