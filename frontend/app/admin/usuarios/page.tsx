@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import DataTable from "@/app/components/Tables/DataTable";
@@ -53,9 +54,14 @@ export default function AdminUsuariosPage() {
       key: "acciones",
       header: "Acciones",
       render: (row: User) => (
-        <Button variant="danger" onClick={() => onDelete(row.id)}>
-          Eliminar
-        </Button>
+        <div className="flex gap-2">
+          <Link href={`/profile/${row.id}`}>
+            <Button variant="secondary">Detalle</Button>
+          </Link>
+          <Button variant="danger" onClick={() => onDelete(row.id)}>
+            Eliminar
+          </Button>
+        </div>
       ),
     },
   ];
