@@ -62,6 +62,7 @@ class Espacio(Base):
     )
 
     id_tipo_espacio: Mapped[int] = mapped_column(ForeignKey("tipo_espacio.id"))
+    tipo_espacio_rel: Mapped["TipoEspacio"] = relationship()
 
 
 class Reserva(Base):
