@@ -9,6 +9,10 @@ export function getPenaltiesByUser(userId: number) {
   return apiFetch<Penalty[]>(`/penalties/user/${userId}`, { method: "GET", cache: "no-store" });
 }
 
+export function getPenaltiesByUserAsAdmin(userId: number) {
+  return apiFetch<Penalty[]>(`/admin/users/${userId}/penalties`, { method: "GET", cache: "no-store" });
+}
+
 export function createPenalty(payload: PenalizationCreatePayload) {
   return apiFetch<Penalty>("/penalties/create", {
     method: "POST",
