@@ -29,7 +29,7 @@ export default function CourtsPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
-      <h1 className="text-3xl">Pistas</h1>
+      <h1 className="text-3xl text-white">Pistas</h1>
       <CourtFilters search={search} setSearch={setSearch} />
       {courtsQuery.loading && <Spinner />}
       {courtsQuery.error && <Toast kind="error" message={courtsQuery.error} />}
