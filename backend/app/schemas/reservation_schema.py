@@ -12,6 +12,7 @@ class ReservationResponse(BaseModel):
     estado: str
     plazas_parciales: Optional[int] = None
     tipo_reserva: str
+    precio_total: float
     id_user: int
     id_espacio: int
 
@@ -23,6 +24,7 @@ class ReservationCreate(BaseModel):
     hora_inicio: time
     hora_fin: time
     plazas_parciales: Optional[int] = None
+    numero_personas: Optional[int] = None
     tipo_reserva: str
     id_user: int
     id_espacio: int
@@ -51,6 +53,7 @@ class ReservationSearchItem(BaseModel):
     estado: str
     plazas_parciales: Optional[int] = None
     tipo_reserva: str
+    precio_total: float
     id_user: int
     id_espacio: int
     usuario_nombre: str
