@@ -38,14 +38,16 @@ export default function CourtDetailPage() {
     <div className="mx-auto max-w-5xl space-y-4 p-4 md:p-8">
       <Breadcrumb items={[{ label: "Pistas", href: "/courts" }, { label: court.nombre }]} />
       <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rounded-2xl border border-acero bg-nieve p-8 text-center">Galeria de la pista</div>
-        <div className="space-y-3 rounded-2xl border border-acero bg-white p-6">
-          <h1 className="text-3xl">{court.nombre}</h1>
-          <p className="inline-flex items-center gap-2 text-sm"><DollarSign size={14} /> {court.precio_hora ?? 0} €/hora</p>
-          <p className="inline-flex items-center gap-2 text-sm"><Users size={14} /> Capacidad: {court.capacidad ?? 0}</p>
-          <p className="inline-flex items-center gap-2 text-sm"><Star size={14} /> Rating: {court.rating ?? 4.5}</p>
-          <p className="inline-flex items-center gap-2 text-sm"><Calendar size={14} /> Disponibilidad proximos 7 dias</p>
-          <Link href={`/reservas?courtId=${court.id}`} className="inline-block rounded-xl bg-azul-pro px-4 py-2 text-sm font-semibold text-white">
+        <div className="rounded-2xl border border-white/15 bg-black/35 p-8 text-center text-gray-200 backdrop-blur-sm">
+          Galeria de la pista
+        </div>
+        <div className="space-y-3 rounded-2xl border border-white/15 bg-black/35 p-6 text-gray-100 backdrop-blur-sm">
+          <h1 className="text-3xl text-white">{court.nombre}</h1>
+          <p className="inline-flex items-center gap-2 text-sm text-gray-300"><DollarSign size={14} /> {court.precio_hora ?? 0} €/hora</p>
+          <p className="inline-flex items-center gap-2 text-sm text-gray-300"><Users size={14} /> Capacidad: {court.capacidad ?? 0}</p>
+          <p className="inline-flex items-center gap-2 text-sm text-gray-300"><Star size={14} /> Rating: {court.rating ?? 4.5}</p>
+          <p className="inline-flex items-center gap-2 text-sm text-gray-300"><Calendar size={14} /> Disponibilidad proximos 7 dias</p>
+          <Link href={`/reservas?courtId=${court.id}`} className="inline-block rounded-xl bg-[#e8863a] px-4 py-2 text-sm font-semibold text-white hover:brightness-110">
             Hacer reserva
           </Link>
         </div>
