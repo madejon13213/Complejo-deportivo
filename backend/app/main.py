@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
-from app.routes import court_router, notification_router, penalty_router, reservation_router, spaces_router, user_router
+from app.routes import admin_router, court_router, notification_router, penalty_router, reservation_router, spaces_router, user_router
 
 app = FastAPI()
 
@@ -25,6 +25,7 @@ app.include_router(reservation_router.router)
 app.include_router(court_router.router)
 app.include_router(penalty_router.router)
 app.include_router(notification_router.router)
+app.include_router(admin_router.router)
 
 Base.metadata.create_all(bind=engine)
 
