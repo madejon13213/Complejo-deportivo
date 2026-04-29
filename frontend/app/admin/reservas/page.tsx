@@ -5,8 +5,9 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import Button from "@/app/components/UI/Button";
 import Input from "@/app/components/UI/Input";
 import Toast from "@/app/components/UI/Toast";
-import { cancelReservation, searchReservations } from "@/lib/services/reservations";
+import { useAuth } from "@/context/AuthContext";
 import { createPenalty } from "@/lib/services/penalties";
+import { cancelReservation, searchReservations } from "@/lib/services/reservations";
 import { ReservationSearchItem } from "@/lib/types";
 
 const PAGE_SIZE = 20;
@@ -16,7 +17,18 @@ interface PenaltyModalState {
   reservation: ReservationSearchItem | null;
 }
 
+function isFutureReservation(reservation: ReservationSearchItem) {
+  const startAt = new Date(`${reservation.fecha}T${reservation.hora_inicio}`);
+  return startAt.getTime() > Date.now();
+}
+
+function isPastReservation(reservation: ReservationSearchItem) {
+  const endAt = new Date(`${reservation.fecha}T${reservation.hora_fin}`);
+  return endAt.getTime() <= Date.now();
+}
+
 export default function AdminReservasPage() {
+  const { isAdmin } = useAuth();
   const [feedback, setFeedback] = useState<{ kind: "success" | "error" | "warning" | "info"; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ReservationSearchItem[]>([]);
@@ -73,12 +85,17 @@ export default function AdminReservasPage() {
     return `Mostrando ${from}-${to} de ${total}`;
   }, [page, total]);
 
-  const onCancel = async (id: number) => {
+  const onCancel = async (reservation: ReservationSearchItem) => {
+    if (!isFutureReservation(reservation)) {
+      setFeedback({ kind: "warning", message: "No se puede cancelar una reserva pasada." });
+      return;
+    }
+
     setFeedback(null);
 
     try {
-      await cancelReservation(id);
-      setFeedback({ kind: "success", message: "Reserva cancelada/eliminada correctamente." });
+      await cancelReservation(reservation.id);
+      setFeedback({ kind: "success", message: "Reserva cancelada correctamente." });
       setRefreshFlag((prev) => prev + 1);
     } catch (error) {
       setFeedback({
@@ -89,6 +106,16 @@ export default function AdminReservasPage() {
   };
 
   const openPenaltyModal = (reservation: ReservationSearchItem) => {
+    if (!isAdmin) {
+      setFeedback({ kind: "warning", message: "Solo un administrador puede penalizar reservas." });
+      return;
+    }
+
+    if (!isPastReservation(reservation)) {
+      setFeedback({ kind: "warning", message: "Solo se puede penalizar una reserva que ya ha pasado." });
+      return;
+    }
+
     setPenaltyReason("");
     setPenaltyState({ open: true, reservation });
   };
@@ -121,6 +148,7 @@ export default function AdminReservasPage() {
 
       setFeedback({ kind: "success", message: "Penalizacion aplicada correctamente." });
       closePenaltyModal();
+      setRefreshFlag((prev) => prev + 1);
     } catch (error) {
       setFeedback({
         kind: "error",
@@ -191,25 +219,34 @@ export default function AdminReservasPage() {
                 </tr>
               )}
 
-              {rows.map((row) => (
-                <tr key={row.id} className="border-b border-white/10">
-                  <td className="px-4 py-3">{row.id}</td>
-                  <td className="px-4 py-3">{row.id_espacio}</td>
-                  <td className="px-4 py-3">{row.usuario_nombre}</td>
-                  <td className="px-4 py-3">{row.fecha} · {row.hora_inicio} - {row.hora_fin}</td>
-                  <td className="px-4 py-3">{row.estado}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button variant="danger" onClick={() => onCancel(row.id)}>
-                        Cancelar
-                      </Button>
-                      <Button variant="secondary" onClick={() => openPenaltyModal(row)}>
-                        Penalizar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const canCancel = isFutureReservation(row);
+                const canPenalize = isAdmin && isPastReservation(row);
+
+                return (
+                  <tr key={row.id} className="border-b border-white/10">
+                    <td className="px-4 py-3">{row.id}</td>
+                    <td className="px-4 py-3">{row.id_espacio}</td>
+                    <td className="px-4 py-3">{row.usuario_nombre}</td>
+                    <td className="px-4 py-3">{row.fecha} · {row.hora_inicio} - {row.hora_fin}</td>
+                    <td className="px-4 py-3">{row.estado}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        {canCancel && (
+                          <Button variant="danger" onClick={() => onCancel(row)}>
+                            Cancelar
+                          </Button>
+                        )}
+                        {canPenalize && (
+                          <Button variant="secondary" onClick={() => openPenaltyModal(row)}>
+                            Penalizar
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
