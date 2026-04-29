@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AlertTriangle, Calendar, Clock, Star } from "lucide-react";
+import { AlertTriangle, Calendar, Clock } from "lucide-react";
 
 import ReservationCard from "@/app/components/Cards/ReservationCard";
 import StatCard from "@/app/components/Cards/StatCard";
@@ -10,8 +10,9 @@ import Spinner from "@/app/components/UI/Spinner";
 import Toast from "@/app/components/UI/Toast";
 import { useAuth } from "@/context/AuthContext";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
+import { getPenaltiesByUser } from "@/lib/services/penalties";
 import { getReservationsByUser } from "@/lib/services/reservations";
-import { Reservation } from "@/lib/types";
+import { Penalty, Reservation } from "@/lib/types";
 
 export default function DashboardPage() {
   const { role, userId, isAdmin, isReady } = useAuth();
@@ -23,7 +24,14 @@ export default function DashboardPage() {
     { enabled: isReady && Boolean(numericUserId) }
   );
 
+  const penaltiesQuery = useApiQuery<Penalty[]>(
+    () => getPenaltiesByUser(numericUserId || 0),
+    [numericUserId],
+    { enabled: isReady && Boolean(numericUserId) }
+  );
+
   const reservations = reservationsQuery.data || [];
+  const penalties = penaltiesQuery.data || [];
   const nextReservations = reservations
     .filter((reservation) => reservation.estado !== "cancelada")
     .sort((a, b) => `${a.fecha}${a.hora_inicio}`.localeCompare(`${b.fecha}${b.hora_inicio}`))
@@ -38,11 +46,14 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-300">Panel principal ({role || "sin rol"})</p>
         </header>
 
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard title="Total reservas" value={String(reservations.length)} icon={<Calendar size={18} />} />
           <StatCard title="Proximas" value={String(nextReservations.length)} icon={<Clock size={18} />} />
-          <StatCard title="Penalizaciones" value="--" icon={<AlertTriangle size={18} />} />
-          <StatCard title="Favoritos" value="--" icon={<Star size={18} />} />
+          <StatCard
+            title="Penalizaciones"
+            value={penaltiesQuery.loading ? "..." : String(penalties.length)}
+            icon={<AlertTriangle size={18} />}
+          />
         </section>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -60,6 +71,7 @@ export default function DashboardPage() {
 
         {reservationsQuery.loading && <Spinner />}
         {reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
+        {penaltiesQuery.error && <Toast kind="error" message={penaltiesQuery.error} />}
 
         <section className="space-y-3">
           <h2 className="text-2xl text-white">Proximas reservas</h2>
