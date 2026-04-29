@@ -2,15 +2,31 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.repositories.court_repository import CourtRepository
+from app.repositories.space_repository import SpaceRepository
+from app.schemas.court_schema import CourtResponse
 
 
 class CourtService:
+    @staticmethod
+    def _to_response(court) -> CourtResponse:
+        space_type = getattr(court, "tipo_espacio_rel", None)
+        return CourtResponse(
+            id=court.id,
+            nombre=court.nombre,
+            precio_hora=float(court.precio_hora),
+            capacidad=int(court.capacidad),
+            precio_hora_parcial=float(court.precio_hora_parcial) if court.precio_hora_parcial is not None else None,
+            id_tipo_espacio=court.id_tipo_espacio,
+            tipo_espacio=space_type.tipo if space_type else None,
+            permite_reserva_parcial=space_type.permite_reserva_parcial if space_type else None,
+        )
+
     @staticmethod
     def get_all_courts(db: Session):
         repo = CourtRepository(db)
         try:
             pistas = repo.get_all()
-            return pistas
+            return [CourtService._to_response(pista) for pista in pistas]
         except Exception:
             raise HTTPException(
                 status_code=500,
@@ -24,7 +40,7 @@ class CourtService:
             court = repo.get_by_id(id)
             if not court:
                 raise HTTPException(status_code=404, detail="Espacio no encontrado")
-            return court
+            return CourtService._to_response(court)
         except HTTPException:
             raise
         except Exception:
@@ -32,25 +48,31 @@ class CourtService:
                 status_code=500,
                 detail="Error al obtener espacio",
             )
-    
+
     @staticmethod
     def get_courts_by_type(id_tipo_espacio: int, db: Session):
         repo = CourtRepository(db)
         try:
             courts = repo.get_by_type(id_tipo_espacio)
-            return courts
+            return [CourtService._to_response(court) for court in courts]
         except Exception:
             raise HTTPException(
                 status_code=500,
                 detail="Error al obtener espacios",
             )
-    
+
     @staticmethod
     def get_courts_by_partial_reservation(permite_reserva_parcial: bool, db: Session):
-        repo = CourtRepository(db)
+        court_repo = CourtRepository(db)
+        space_repo = SpaceRepository(db)
         try:
-            courts = repo.get_by_partial_reservation(permite_reserva_parcial)
-            return courts
+            courts = court_repo.get_all()
+            filtered = []
+            for court in courts:
+                space_type = space_repo.get_by_id(court.id_tipo_espacio)
+                if space_type and space_type.permite_reserva_parcial == permite_reserva_parcial:
+                    filtered.append(court)
+            return [CourtService._to_response(court) for court in filtered]
         except Exception:
             raise HTTPException(
                 status_code=500,
