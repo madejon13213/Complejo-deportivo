@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import Base, engine
+from app.exceptions.handlers import setup_exception_handlers
 from app.routes import admin_router, court_router, notification_router, penalty_router, reservation_router, spaces_router, user_router
 
 app = FastAPI()
+setup_exception_handlers(app)
 
 origins = [
     "http://localhost:3000",

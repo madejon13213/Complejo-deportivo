@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 
 export class ApiError extends Error {
@@ -32,35 +34,58 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    credentials: "include",
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      credentials: "include",
+      headers,
+    });
 
-  if (!response.ok) {
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      payload = undefined;
-    }
-
-    const message = parseErrorMessage(payload);
-
-    if (response.status === 401 && typeof window !== "undefined") {
-      const currentPath = window.location.pathname;
-      if (!isAuthRoute(currentPath)) {
-        window.location.assign("/login");
+    if (!response.ok) {
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = undefined;
       }
+
+      const message = parseErrorMessage(payload);
+
+      if (response.status === 401 && typeof window !== "undefined") {
+        const currentPath = window.location.pathname;
+        if (!isAuthRoute(currentPath)) {
+          toast.error("Tu sesión ha caducado. Por favor, inicia sesión de nuevo.");
+          window.location.assign("/login");
+        }
+      } else if (response.status === 409 && typeof window !== "undefined") {
+        toast.error(message, {
+          duration: 6000,
+          action: {
+            label: "Refrescar",
+            onClick: () => window.location.reload()
+          }
+        });
+      } else if (typeof window !== "undefined") {
+        toast.error(message);
+      }
+
+      throw new ApiError(message, response.status, payload);
     }
 
-    throw new ApiError(message, response.status, payload);
-  }
+    if (response.status === 204) {
+      return undefined as T;
+    }
 
-  if (response.status === 204) {
-    return undefined as T;
+    return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Fallback for network errors (e.g. server down, offline)
+    if (typeof window !== "undefined") {
+      toast.error("Error de conexión. Verifica tu acceso a internet e inténtalo de nuevo.");
+    }
+    throw new ApiError("Error de conexión.", 0);
   }
-
-  return response.json() as Promise<T>;
 }

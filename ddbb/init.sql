@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS usuario (
     email VARCHAR(255) NOT NULL UNIQUE,
     contraseña VARCHAR(255) NOT NULL,
     telefono VARCHAR(20),
-    id_rol INTEGER NOT NULL REFERENCES rol(id)
+    id_rol INTEGER NOT NULL REFERENCES rol(id),
+    version_id INTEGER NOT NULL DEFAULT 1
 );
 
 -- 3. TIPO_ESPACIO
@@ -44,6 +45,7 @@ CREATE TABLE IF NOT EXISTS reserva (
     tipo_reserva VARCHAR(50) NOT NULL,
     id_user INTEGER NOT NULL REFERENCES usuario(id),
     id_espacio INTEGER NOT NULL REFERENCES espacio(id),
+    version_id INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT chk_reserva_horas CHECK (hora_fin > hora_inicio)
 );
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
+import { Toaster } from "sonner";
 
 import Footer from "@/app/components/Layout/Footer";
 import Header from "@/app/components/Layout/Header";
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <Toaster position="top-right" richColors />
         </AuthProvider>
       </body>
     </html>

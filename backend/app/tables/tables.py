@@ -38,8 +38,13 @@ class Usuario(Base):
     telefono: Mapped[Optional[str]] = mapped_column(String(20))
 
     id_rol: Mapped[int] = mapped_column(ForeignKey("rol.id"))
+    version_id: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     rol_rel: Mapped["Rol"] = relationship()
+
+    __mapper_args__ = {
+        "version_id_col": version_id
+    }
 
 
 class TipoEspacio(Base):
@@ -78,10 +83,15 @@ class Reserva(Base):
 
     id_user: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
     id_espacio: Mapped[int] = mapped_column(ForeignKey("espacio.id"))
+    version_id: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     __table_args__ = (
         CheckConstraint("hora_fin > hora_inicio", name="chk_reserva_horas"),
     )
+
+    __mapper_args__ = {
+        "version_id_col": version_id
+    }
 
 
 class Penalizacion(Base):
