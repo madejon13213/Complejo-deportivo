@@ -34,6 +34,10 @@ class ReservationService:
         return "Finalizada"
 
     @staticmethod
+    def _reservation_start_datetime(reservation: Reserva) -> datetime:
+        return datetime.combine(reservation.fecha, reservation.hora_inicio)
+
+    @staticmethod
     def _refresh_statuses(reservations: list[Reserva]) -> None:
         for reservation in reservations:
             if reservation.estado == "Cancelada":
@@ -348,6 +352,18 @@ class ReservationService:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail=f"Reserva con ID {reservation_id} no encontrada",
+                )
+
+            reservation_start = ReservationService._reservation_start_datetime(reservation)
+            if reservation_start <= datetime.now():
+                logger.warning(
+                    "[ReservationService.delete_reservation] blocked past reservation_id=%s start=%s",
+                    reservation_id,
+                    reservation_start,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No se puede cancelar una reserva que ya ha comenzado o ha pasado",
                 )
 
             deleted = repo.delete_by_id(reservation_id)
