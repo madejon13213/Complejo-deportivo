@@ -9,6 +9,10 @@ export function getUsers() {
   return apiFetch<User[]>("/users/getAll", { method: "GET", cache: "no-store" });
 }
 
+export function getUserById(userId: number) {
+  return apiFetch<User>(`/users/${userId}`, { method: "GET", cache: "no-store" });
+}
+
 export function deleteUser(userId: number) {
   return apiFetch<{ mensaje?: string }>(`/users/${userId}`, { method: "DELETE" });
 }
