@@ -9,19 +9,19 @@ interface CourtCardProps {
 
 export default function CourtCard({ court }: CourtCardProps) {
   return (
-    <article className="rounded-2xl border border-acero bg-white p-4 shadow-sm">
-      <div className="mb-3 flex h-32 items-center justify-center rounded-xl bg-nieve text-azul-pro">
+    <article className="rounded-2xl border border-white/15 bg-black/35 p-4 shadow-sm backdrop-blur-sm">
+      <div className="mb-3 flex h-32 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white">
         <span className="font-semibold">{court.nombre}</span>
       </div>
       <div className="space-y-2">
-        <h3 className="text-xl">{court.nombre}</h3>
-        <p className="inline-flex items-center gap-1 text-sm text-gray-600">
+        <h3 className="text-xl text-white">{court.nombre}</h3>
+        <p className="inline-flex items-center gap-1 text-sm text-gray-300">
           <DollarSign size={14} /> {court.precio_hora ?? 0} €/h
         </p>
-        <p className="inline-flex items-center gap-1 text-sm text-gray-600">
+        <p className="inline-flex items-center gap-1 text-sm text-gray-300">
           <Users size={14} /> Capacidad: {court.capacidad ?? 0}
         </p>
-        <p className="inline-flex items-center gap-1 text-sm text-gray-600">
+        <p className="inline-flex items-center gap-1 text-sm text-gray-300">
           <Star size={14} /> {court.rating ?? 4.5}
         </p>
       </div>
