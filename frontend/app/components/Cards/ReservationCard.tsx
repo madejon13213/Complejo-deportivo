@@ -27,6 +27,7 @@ export default function ReservationCard({ reservation }: ReservationCardProps) {
         <p className="inline-flex items-center gap-2">
           <Clock size={14} /> {reservation.hora_inicio} - {reservation.hora_fin}
         </p>
+        <p className="text-sm font-semibold text-[#ffcc9f]">Total: {Number(reservation.precio_total || 0).toFixed(2)} €</p>
       </div>
     </article>
   );
