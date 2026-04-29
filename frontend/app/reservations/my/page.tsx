@@ -11,9 +11,20 @@ import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getReservationsByUser } from "@/lib/services/reservations";
 import { Reservation } from "@/lib/types";
 
+type ReservationTab = "activas" | "pasadas" | "canceladas";
+
+function isCanceled(reservation: Reservation) {
+  return reservation.estado.toLowerCase() === "cancelada";
+}
+
+function isPast(reservation: Reservation) {
+  const end = new Date(`${reservation.fecha}T${reservation.hora_fin}`);
+  return end.getTime() < Date.now();
+}
+
 export default function MyReservationsPage() {
   const { userId, isReady } = useAuth();
-  const [filter, setFilter] = useState<"todas" | "activas" | "pasadas">("todas");
+  const [tab, setTab] = useState<ReservationTab>("activas");
   const numericUserId = userId ? Number(userId) : null;
 
   const reservationsQuery = useApiQuery<Reservation[]>(
@@ -22,12 +33,16 @@ export default function MyReservationsPage() {
     { enabled: isReady && Boolean(numericUserId) }
   );
 
-  const filtered = useMemo(() => {
+  const grouped = useMemo(() => {
     const rows = reservationsQuery.data || [];
-    if (filter === "activas") return rows.filter((item) => item.estado === "confirmada");
-    if (filter === "pasadas") return rows.filter((item) => item.estado !== "confirmada");
-    return rows;
-  }, [filter, reservationsQuery.data]);
+    const canceladas = rows.filter(isCanceled);
+    const pasadas = rows.filter((item) => !isCanceled(item) && isPast(item));
+    const activas = rows.filter((item) => !isCanceled(item) && !isPast(item));
+
+    return { activas, pasadas, canceladas };
+  }, [reservationsQuery.data]);
+
+  const currentRows = grouped[tab];
 
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
@@ -36,20 +51,30 @@ export default function MyReservationsPage() {
         <Button variant="secondary" icon={<Download size={16} />}>Descargar historial</Button>
       </div>
 
-      <div className="flex gap-2">
-        <Button variant={filter === "todas" ? "primary" : "secondary"} onClick={() => setFilter("todas")}>Todas</Button>
-        <Button variant={filter === "activas" ? "primary" : "secondary"} onClick={() => setFilter("activas")}>Activas</Button>
-        <Button variant={filter === "pasadas" ? "primary" : "secondary"} onClick={() => setFilter("pasadas")}>Pasadas</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button variant={tab === "activas" ? "primary" : "secondary"} onClick={() => setTab("activas")}>
+          Activas / Próximas ({grouped.activas.length})
+        </Button>
+        <Button variant={tab === "pasadas" ? "primary" : "secondary"} onClick={() => setTab("pasadas")}>
+          Pasadas ({grouped.pasadas.length})
+        </Button>
+        <Button variant={tab === "canceladas" ? "primary" : "secondary"} onClick={() => setTab("canceladas")}>
+          Canceladas ({grouped.canceladas.length})
+        </Button>
       </div>
 
       {reservationsQuery.loading && <Spinner />}
       {reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
 
       <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((reservation) => (
+        {currentRows.map((reservation) => (
           <ReservationCard key={reservation.id} reservation={reservation} />
         ))}
       </div>
+
+      {!reservationsQuery.loading && currentRows.length === 0 && (
+        <p className="text-sm text-gray-300">No hay reservas en esta categoría.</p>
+      )}
     </div>
   );
 }
