@@ -100,9 +100,8 @@ export default function ReservasPage() {
     [courtsQuery.data]
   );
 
-  const occupiedUnitsForSelection = selection
-    ? getOccupiedUnits(selection, reservations, courtCapacity, allowsPartial)
-    : 0;
+  const occupiedUnitsForSelection =
+    selection ? getOccupiedUnits(selection, reservations, courtCapacity, allowsPartial) : 0;
 
   const availableUnitsForSelection = Math.max(0, courtCapacity - occupiedUnitsForSelection);
   const requestedSpaces = Math.max(1, Number(espaciosReservados) || 1);
@@ -114,6 +113,19 @@ export default function ReservasPage() {
     : false;
 
   const canConfirm = Boolean(selection && selectedCourt && numericUserId);
+
+  const previewPrice = useMemo(() => {
+    if (!selection || !selectedCourtDetails) return 0;
+    const hours = Math.max(0, selection.endHour - selection.startHour);
+    if (!hours) return 0;
+
+    if (allowsPartial) {
+      const unit = selectedCourtDetails.precio_hora_parcial || ((selectedCourtDetails.precio_hora || 0) / Math.max(1, courtCapacity));
+      return Number((hours * unit * requestedSpaces).toFixed(2));
+    }
+
+    return Number((hours * (selectedCourtDetails.precio_hora || 0)).toFixed(2));
+  }, [selection, selectedCourtDetails, allowsPartial, courtCapacity, requestedSpaces]);
 
   const onConfirm = async () => {
     if (!selection || !selectedCourt || !numericUserId) {
@@ -161,6 +173,7 @@ export default function ReservasPage() {
         hora_fin: endSlot.hora,
         tipo_reserva: tipoReserva,
         plazas_parciales: tipoReserva === "parcial" ? requestedSpaces : null,
+        numero_personas: tipoReserva === "parcial" ? Number(numPersonas) : null,
         id_user: numericUserId,
         id_espacio: Number(selectedCourt),
       });
@@ -275,9 +288,12 @@ export default function ReservasPage() {
         {!selection && <p className="mt-2 text-sm text-gray-300">Aun no has seleccionado un horario.</p>}
 
         {selection && (
-          <p className="mt-2 text-sm text-gray-200">
-            Pista #{selectedCourt} · Dia {selection.date} · {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
-          </p>
+          <>
+            <p className="mt-2 text-sm text-gray-200">
+              Pista #{selectedCourt} · Dia {selection.date} · {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
+            </p>
+            <p className="mt-2 text-base font-semibold text-[#ffcc9f]">Precio total estimado: {previewPrice.toFixed(2)} €</p>
+          </>
         )}
 
         {selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN" && (
