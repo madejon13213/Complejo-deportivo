@@ -17,6 +17,5 @@ class PenaltyRepository(BaseRepository):
 
     def create(self, penalty: Penalizacion) -> Penalizacion:
         self.db.add(penalty)
-        self.db.commit()
-        self.db.refresh(penalty)
+        self.db.flush()
         return penalty
