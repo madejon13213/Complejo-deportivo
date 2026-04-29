@@ -105,3 +105,6 @@ class ReservationRepository(BaseRepository):
         rows = self.db.query(Reserva).filter(Reserva.id == reservation_id).delete(synchronize_session=False)
         self.db.flush()
         return rows > 0
+
+    def count_by_user(self, id_user: int) -> int:
+        return self.db.query(Reserva).filter(Reserva.id_user == id_user).count()
