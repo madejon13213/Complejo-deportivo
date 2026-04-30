@@ -77,12 +77,36 @@ export interface SpaceType {
   permite_reserva_parcial: boolean;
 }
 
+export interface SpaceTypeSearchResponse {
+  items: SpaceType[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface Penalty {
   id: number;
   fecha_inicio: string;
   fecha_fin: string;
   tipo_penalizacion: string;
   id_reserva: number;
+}
+
+export interface PenaltySearchResponse {
+  items: Penalty[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
+export interface CourtSearchResponse {
+  items: Court[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
 }
 
 export interface PenalizationCreatePayload {

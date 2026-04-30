@@ -13,12 +13,22 @@ export function getActiveReservations() {
   return apiFetch<Reservation[]>("/reservations/active", { method: "GET", cache: "no-store" });
 }
 
-export function getReservationsByUser(userId: number) {
-  return apiFetch<Reservation[]>(`/reservations/user/${userId}`, { method: "GET", cache: "no-store" });
+export function getReservationsByUser(userId: number, page: number = 1, limit: number = 10, statusGroup?: string) {
+  const params: any = { page: String(page), limit: String(limit) };
+  if (statusGroup) params.status_group = statusGroup;
+  const search = new URLSearchParams(params);
+  return apiFetch<ReservationSearchResponse>(`/reservations/user/${userId}?${search.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
 }
 
-export function getReservationsByUserAsAdmin(userId: number) {
-  return apiFetch<Reservation[]>(`/admin/users/${userId}/reservations`, { method: "GET", cache: "no-store" });
+export function getReservationsByUserAsAdmin(userId: number, page: number = 1, limit: number = 10) {
+  const search = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return apiFetch<ReservationSearchResponse>(`/admin/users/${userId}/reservations?${search.toString()}`, {
+    method: "GET",
+    cache: "no-store",
+  });
 }
 
 export function getReservationsBySpace(spaceId: number) {

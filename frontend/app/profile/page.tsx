@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { getReservationsByUser } from "@/lib/services/reservations";
 import { getPenaltiesByUser } from "@/lib/services/penalties";
 import { deleteUser } from "@/lib/services/users";
-import { User, Reservation, Penalty } from "@/lib/types";
+import { User } from "@/lib/types";
 
 export default function ProfilePage() {
   const { logout, role, userId } = useAuth();
@@ -21,22 +21,22 @@ export default function ProfilePage() {
   const [feedback, setFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
   const [userData, setUserData] = useState<User | null>(null);
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [resCount, setResCount] = useState(0);
+  const [penCount, setPenCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       if (!userId) return;
       try {
-        const [me, res, pen] = await Promise.all([
+        const [me, resResp, penResp] = await Promise.all([
           apiFetch<User>("/users/me"),
-          getReservationsByUser(Number(userId)),
-          getPenaltiesByUser(Number(userId))
+          getReservationsByUser(Number(userId), 1, 1),
+          getPenaltiesByUser(Number(userId), 1, 1)
         ]);
         setUserData(me);
-        setReservations(res);
-          setPenalties(pen);
+        setResCount(resResp.total);
+        setPenCount(penResp.total);
       } catch (error) {
         console.error("Error loading profile data:", error);
       } finally {
@@ -45,10 +45,6 @@ export default function ProfilePage() {
     }
     loadData();
   }, [userId]);
-
-  const activeReservations = reservations.filter(
-    (r) => r.estado === "Pendiente" || r.estado === "En curso"
-  );
 
   const onDeleteAccount = async () => {
     if (!userId) return;
@@ -95,17 +91,17 @@ export default function ProfilePage() {
         <Card
           icon={<Calendar size={16} />}
           label="Total reservas"
-          value={loading ? "..." : reservations.length.toString()}
+          value={loading ? "..." : resCount.toString()}
         />
         <Card
           icon={<Clock size={16} />}
-          label="Reservas activas"
-          value={loading ? "..." : activeReservations.length.toString()}
+          label="Estado actual"
+          value={loading ? "..." : "Activo"}
         />
         <Card
           icon={<AlertTriangle size={16} />}
           label="Penalizaciones"
-          value={loading ? "..." : penalties.length.toString()}
+          value={loading ? "..." : penCount.toString()}
         />
       </section>
 

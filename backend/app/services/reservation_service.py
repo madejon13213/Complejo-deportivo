@@ -59,12 +59,18 @@ class ReservationService:
     @staticmethod
     def _calculate_total_price(reservation: Reserva, space: Espacio, allows_partial: bool) -> float:
         duration = ReservationService._duration_hours(reservation.hora_inicio, reservation.hora_fin)
+        
+        # Defensive checks for None values
+        precio_hora = float(space.precio_hora) if space.precio_hora is not None else 0.0
+        capacidad = int(space.capacidad) if space.capacidad is not None else 1
+        capacidad = max(1, capacidad)
+
         if allows_partial and ReservationService._uses_partial(reservation):
-            unit_price = float(space.precio_hora) / max(1, int(space.capacidad))
+            unit_price = precio_hora / capacidad
             units = max(1, int(reservation.plazas_parciales or 1))
             return round(duration * unit_price * units, 2)
 
-        return round(duration * float(space.precio_hora), 2)
+        return round(duration * precio_hora, 2)
 
     @staticmethod
     def _to_response(reservation: Reserva, space: Espacio, allows_partial: bool) -> ReservationResponse:
@@ -95,20 +101,20 @@ class ReservationService:
     @staticmethod
     def get_all_reservations(db: Session) -> list[ReservationResponse]:
         repo = ReservationRepository(db)
-        court_repo = CourtRepository(db)
         try:
             reservations = repo.get_all()
             ReservationService._refresh_statuses(reservations)
-            db.commit()
             logger.info("[ReservationService.get_all_reservations] total=%s", len(reservations))
 
             result: list[ReservationResponse] = []
             for reservation in reservations:
-                space = court_repo.get_by_id(reservation.id_espacio)
+                space = getattr(reservation, "espacio_rel", None)
                 if not space:
                     continue
                 allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
                 result.append(ReservationService._to_response(reservation, space, allows_partial))
+            
+            db.commit() # Commit al final
             return result
         except Exception:
             db.rollback()
@@ -131,14 +137,19 @@ class ReservationService:
         try:
             rows, total = repo.get_filtered_paginated(fecha=fecha, usuario=usuario, page=page, limit=limit)
             ReservationService._refresh_statuses([reserva for reserva, _ in rows])
-            db.commit()
 
             items: list[ReservationSearchItem] = []
             for reserva, usuario_row in rows:
-                space = court_repo.get_by_id(reserva.id_espacio)
+                space = getattr(reserva, "espacio_rel", None)
                 if not space:
+                    logger.warning("[ReservationService.get_filtered_reservations] missing space_rel for reservation_id=%s", reserva.id)
                     continue
-                allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
+                    
+                allows_partial = bool(
+                    getattr(space, "tipo_espacio_rel", None) and 
+                    space.tipo_espacio_rel.permite_reserva_parcial
+                )
+                
                 items.append(
                     ReservationSearchItem(
                         id=reserva.id,
@@ -156,6 +167,8 @@ class ReservationService:
                         ),
                     )
                 )
+
+            db.commit() # Commit al final
 
             total_pages = max(1, ceil(total / limit)) if limit > 0 else 1
             logger.info(
@@ -200,11 +213,13 @@ class ReservationService:
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
             ReservationService._refresh_statuses([reservation])
-            db.commit()
-            space = court_repo.get_by_id(reservation.id_espacio)
+            
+            space = getattr(reservation, "espacio_rel", None)
             if not space:
                 raise HTTPException(status_code=404, detail="Espacio no encontrado")
+                
             allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
+            db.commit() # Commit al final
             logger.info("[ReservationService.get_reservation_by_id] found reservation_id=%s", reservation_id)
             return ReservationService._to_response(reservation, space, allows_partial)
         except HTTPException:
@@ -218,21 +233,90 @@ class ReservationService:
             )
 
     @staticmethod
+    def get_user_reservations_paginated(
+        user_id: int, 
+        db: Session, 
+        page: int, 
+        limit: int, 
+        status_group: Optional[str] = None
+    ) -> ReservationSearchResponse:
+        repo = ReservationRepository(db)
+        try:
+            items_db, total = repo.get_by_user_paginated(user_id, page, limit, status_group)
+            
+            # Actualizamos estados si es necesario
+            ReservationService._refresh_statuses(items_db)
+            
+            items: list[ReservationSearchItem] = []
+            for res in items_db:
+                # Ya tenemos espacio_rel cargado por el joinedload en el repositorio
+                space = getattr(res, "espacio_rel", None)
+                if not space:
+                    logger.warning("[ReservationService.get_user_reservations_paginated] missing space_rel for reservation_id=%s", res.id)
+                    continue
+                
+                # Ya tenemos tipo_espacio_rel cargado también
+                allows_partial = bool(
+                    getattr(space, "tipo_espacio_rel", None) and 
+                    space.tipo_espacio_rel.permite_reserva_parcial
+                )
+                
+                usuario_nombre = ""
+                if hasattr(res, "usuario_rel") and res.usuario_rel:
+                    u = res.usuario_rel
+                    usuario_nombre = " ".join([part for part in [u.nombre, u.pri_ape, u.seg_ape] if part])
+
+                items.append(
+                    ReservationSearchItem(
+                        id=res.id,
+                        fecha=res.fecha,
+                        hora_inicio=res.hora_inicio,
+                        hora_fin=res.hora_fin,
+                        estado=res.estado,
+                        plazas_parciales=res.plazas_parciales,
+                        tipo_reserva=res.tipo_reserva,
+                        precio_total=ReservationService._calculate_total_price(res, space, allows_partial),
+                        id_user=res.id_user,
+                        id_espacio=res.id_espacio,
+                        usuario_nombre=usuario_nombre,
+                    )
+                )
+
+            db.commit() # Commit al final después de todo el procesamiento
+
+            total_pages = max(1, ceil(total / limit)) if limit > 0 else 1
+            logger.info("[ReservationService.get_user_reservations_paginated] user_id=%s page=%s total=%s", user_id, page, total)
+            return ReservationSearchResponse(
+                items=items,
+                total=total,
+                page=page,
+                limit=limit,
+                total_pages=total_pages,
+            )
+        except Exception as e:
+            db.rollback()
+            logger.exception("[ReservationService.get_user_reservations_paginated] error user_id=%s: %s", user_id, str(e))
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error al recuperar las reservas paginadas del usuario: {str(e)}",
+            )
+
+    @staticmethod
     def get_user_reservations(user_id: int, db: Session) -> list[ReservationResponse]:
         repo = ReservationRepository(db)
-        court_repo = CourtRepository(db)
         try:
             reservations = repo.get_by_user(user_id)
             ReservationService._refresh_statuses(reservations)
-            db.commit()
             logger.info("[ReservationService.get_user_reservations] user_id=%s total=%s", user_id, len(reservations))
             result: list[ReservationResponse] = []
             for reservation in reservations:
-                space = court_repo.get_by_id(reservation.id_espacio)
+                space = getattr(reservation, "espacio_rel", None)
                 if not space:
                     continue
                 allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
                 result.append(ReservationService._to_response(reservation, space, allows_partial))
+            
+            db.commit() # Commit al final
             return result
         except Exception:
             db.rollback()
@@ -245,16 +329,24 @@ class ReservationService:
     @staticmethod
     def get_space_reservations(space_id: int, db: Session) -> list[ReservationResponse]:
         repo = ReservationRepository(db)
-        court_repo = CourtRepository(db)
         try:
             reservations = repo.get_by_space(space_id)
             ReservationService._refresh_statuses(reservations)
-            db.commit()
             logger.info("[ReservationService.get_space_reservations] space_id=%s total=%s", space_id, len(reservations))
-            space = court_repo.get_by_id(space_id)
+            # El espacio ya debería estar cargado en las reservas por el repositorio
+            reservation_sample = reservations[0] if reservations else None
+            space = getattr(reservation_sample, "espacio_rel", None) if reservation_sample else None
+            
+            if not space:
+                # Si no hay reservas, buscamos por ID
+                court_repo = CourtRepository(db)
+                space = court_repo.get_by_id(space_id)
+
             if not space:
                 return []
+                
             allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
+            db.commit() # Commit al final
             return [ReservationService._to_response(reservation, space, allows_partial) for reservation in reservations]
         except Exception:
             db.rollback()
@@ -271,15 +363,15 @@ class ReservationService:
         try:
             reservations = repo.get_active()
             ReservationService._refresh_statuses(reservations)
-            db.commit()
-            logger.info("[ReservationService.get_active_reservations] total=%s", len(reservations))
             result: list[ReservationResponse] = []
             for reservation in reservations:
-                space = court_repo.get_by_id(reservation.id_espacio)
+                space = getattr(reservation, "espacio_rel", None)
                 if not space:
                     continue
                 allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
                 result.append(ReservationService._to_response(reservation, space, allows_partial))
+            
+            db.commit() # Commit al final
             return result
         except Exception:
             db.rollback()

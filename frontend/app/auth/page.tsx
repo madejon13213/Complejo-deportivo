@@ -1,21 +1,39 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, UserPlus } from "lucide-react";
 
 import LoginForm from "@/app/components/Forms/LoginForm";
 import RegisterForm from "@/app/components/Forms/RegisterForm";
+import { useAuth } from "@/context/AuthContext";
+import Spinner from "@/app/components/UI/Spinner";
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { isAuthenticated, isReady } = useAuth();
   const [tab, setTab] = useState<"login" | "register">("login");
+
+  useEffect(() => {
+    if (isReady && isAuthenticated) {
+      router.replace("/dashboard");
+    }
+  }, [isReady, isAuthenticated, router]);
 
   useEffect(() => {
     const queryTab = searchParams.get("tab");
     if (queryTab === "register") setTab("register");
     if (queryTab === "login") setTab("login");
   }, [searchParams]);
+
+  if (!isReady || isAuthenticated) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-8rem)] px-4 py-10">

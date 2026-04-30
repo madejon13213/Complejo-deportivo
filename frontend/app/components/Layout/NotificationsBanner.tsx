@@ -8,13 +8,15 @@ import { useAuth } from "@/context/AuthContext";
 export default function NotificationsBanner() {
   const { isAuthenticated, notifications, markNotificationAsRead } = useAuth();
 
-  if (!isAuthenticated || notifications.length === 0) {
+  const unread = notifications.filter((n) => !n.leida);
+
+  if (!isAuthenticated || unread.length === 0) {
     return null;
   }
 
   return (
     <section className="mx-auto mt-3 w-full max-w-7xl space-y-2 px-4">
-      {notifications.map((notification) => (
+      {unread.map((notification) => (
         <div
           key={notification.id}
           className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-amber-100"

@@ -83,19 +83,39 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. TIPOS DE ESPACIO
-INSERT INTO tipo_espacio (tipo, permite_reserva_parcial)
-VALUES
-('Pista Deportiva', FALSE),
-('Gimnasio', TRUE)
-ON CONFLICT (tipo) DO NOTHING;
+INSERT INTO tipo_espacio (id, tipo, permite_reserva_parcial)
+VALUES 
+(1, 'Pista de Atletismo', TRUE),  -- Permite reservar por "calles" o plazas
+(2, 'Frontón', FALSE),
+(3, 'Tenis', FALSE),
+(4, 'Fútbol Sala', FALSE),
+(5, 'Voleibol', FALSE)
+ON CONFLICT (id) DO UPDATE SET permite_reserva_parcial = EXCLUDED.permite_reserva_parcial;
 
 -- 4. ESPACIOS
 INSERT INTO espacio (nombre, precio_hora, capacidad, precio_hora_parcial, id_tipo_espacio)
 VALUES
-('Pista de Pádel 1', 20.00, 4, NULL, 1),
-('Gimnasio Principal', 10.00, 50, 3.00, 2),
-('Campo de Fútbol 7', 60.00, 14, NULL, 1)
-ON CONFLICT (nombre) DO NOTHING;
+-- PISTAS DE ATLETISMO (Con reserva parcial/por calles)
+('Pista Atletismo Exterior - Calle 1', 15.00, 10, 2.50, 1),
+('Pista Atletismo Exterior - Calle 2', 15.00, 10, 2.50, 1),
+
+-- FRONTÓN
+('Frontón Municipal 1', 12.00, 4, NULL, 2),
+('Frontón Municipal 2', 12.00, 4, NULL, 2),
+
+-- PISTAS DE TENIS
+('Pista Tenis 1 (Rápida)', 18.00, 4, NULL, 3),
+('Pista Tenis 2 (Rápida)', 18.00, 4, NULL, 3),
+('Pista Tenis 3 (Tierra Batida)', 22.00, 4, NULL, 3),
+
+-- CAMPOS DE FÚTBOL SALA
+('Pabellón Fútbol Sala A', 45.00, 12, NULL, 4),
+('Pabellón Fútbol Sala B', 45.00, 12, NULL, 4),
+
+-- PISTAS DE VOLEY
+('Pista Voleibol Interior', 25.00, 12, NULL, 5),
+('Pista Vóley Playa 1', 15.00, 6, NULL, 5),
+('Pista Vóley Playa 2', 15.00, 6, NULL, 5);
 
 -- 5. RESERVAS
 INSERT INTO reserva (fecha, hora_inicio, hora_fin, estado, plazas_parciales, tipo_reserva, id_user, id_espacio)

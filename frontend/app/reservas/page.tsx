@@ -15,7 +15,7 @@ import { CalendarRange, toLocalSlot } from "@/lib/date";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getCourts } from "@/lib/services/courts";
 import { createReservation, estimateReservationPrice, getReservationsBySpace } from "@/lib/services/reservations";
-import { Court, Reservation } from "@/lib/types";
+import { Court, CourtSearchResponse, Reservation } from "@/lib/types";
 
 function overlaps(range: CalendarRange, reservation: Reservation) {
   if (reservation.fecha !== range.date || reservation.estado.toLowerCase() === "cancelada") return false;
@@ -52,7 +52,7 @@ export default function ReservasPage() {
   const [saving, setSaving] = useState(false);
   const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
 
-  const courtsQuery = useApiQuery<Court[]>(() => getCourts(), []);
+  const courtsQuery = useApiQuery<CourtSearchResponse>(() => getCourts(1, 100), []);
 
   useEffect(() => {
     const preselectedCourt = searchParams.get("courtId");
@@ -62,7 +62,8 @@ export default function ReservasPage() {
   }, [searchParams]);
 
   const selectedCourtDetails = useMemo(() => {
-    return (courtsQuery.data || []).find((court) => String(court.id) === selectedCourt) || null;
+    const items = courtsQuery.data?.items || [];
+    return items.find((court) => String(court.id) === selectedCourt) || null;
   }, [courtsQuery.data, selectedCourt]);
 
   const courtCapacity = Math.max(1, selectedCourtDetails?.capacidad || 1);
@@ -92,7 +93,7 @@ export default function ReservasPage() {
   const reservations = reservationsQuery.data || [];
   const courtOptions = useMemo(
     () =>
-      (courtsQuery.data || []).map((court) => ({
+      (courtsQuery.data?.items || []).map((court) => ({
         value: String(court.id),
         label: `${court.nombre} · ${court.precio_hora ?? 0} €/h`,
       })),

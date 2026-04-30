@@ -4,27 +4,61 @@ from typing import Optional
 from sqlalchemy import func
 
 from app.repositories.base_repository import BaseRepository
-from app.tables.tables import Reserva, Usuario
+from app.tables.tables import Reserva, Usuario, Espacio
 
 
 class ReservationRepository(BaseRepository):
     def get_all(self) -> list[Reserva]:
-        return self.db.query(Reserva).all()
+        from sqlalchemy.orm import joinedload
+        return self.db.query(Reserva).options(
+            joinedload(Reserva.espacio_rel).joinedload(Espacio.tipo_espacio_rel)
+        ).all()
 
     def get_by_id(self, id: int) -> Optional[Reserva]:
         return self.db.query(Reserva).filter(Reserva.id == id).first()
+
+    def get_by_user_paginated(
+        self, 
+        user_id: int, 
+        page: int, 
+        limit: int, 
+        status_group: Optional[str] = None
+    ) -> tuple[list[Reserva], int]:
+        from sqlalchemy.orm import joinedload
+        query = self.db.query(Reserva).options(
+            joinedload(Reserva.usuario_rel),
+            joinedload(Reserva.espacio_rel).joinedload(Espacio.tipo_espacio_rel)
+        ).filter(Reserva.id_user == user_id)
+        
+        if status_group == "activas":
+            query = query.filter(Reserva.estado.in_(["Pendiente", "En curso"]))
+        elif status_group == "pasadas":
+            query = query.filter(Reserva.estado == "Finalizada")
+        elif status_group == "canceladas":
+            query = query.filter(Reserva.estado == "Cancelada")
+
+        query = query.order_by(Reserva.fecha.desc(), Reserva.hora_inicio.desc())
+        total = query.count()
+        items = query.offset((page - 1) * limit).limit(limit).all()
+        return items, total
 
     def get_by_user(self, user_id: int) -> list[Reserva]:
         return self.db.query(Reserva).filter(Reserva.id_user == user_id).all()
 
     def get_by_space(self, space_id: int) -> list[Reserva]:
-        return self.db.query(Reserva).filter(Reserva.id_espacio == space_id).all()
+        from sqlalchemy.orm import joinedload
+        return self.db.query(Reserva).options(
+            joinedload(Reserva.espacio_rel).joinedload(Espacio.tipo_espacio_rel)
+        ).filter(Reserva.id_espacio == space_id).all()
 
     def get_active(self) -> list[Reserva]:
+        from sqlalchemy.orm import joinedload
         ahora = datetime.now()
         ahora_fecha = ahora.date()
         ahora_hora = ahora.time()
-        return self.db.query(Reserva).filter(
+        return self.db.query(Reserva).options(
+            joinedload(Reserva.espacio_rel).joinedload(Espacio.tipo_espacio_rel)
+        ).filter(
             (Reserva.fecha > ahora_fecha)
             | ((Reserva.fecha == ahora_fecha) & (Reserva.hora_fin > ahora_hora))
         ).all()
@@ -56,7 +90,10 @@ class ReservationRepository(BaseRepository):
         page: int,
         limit: int,
     ):
-        base_query = self.db.query(Reserva, Usuario).join(Usuario, Usuario.id == Reserva.id_user)
+        from sqlalchemy.orm import joinedload
+        base_query = self.db.query(Reserva, Usuario).join(Usuario, Usuario.id == Reserva.id_user).options(
+            joinedload(Reserva.espacio_rel).joinedload(Espacio.tipo_espacio_rel)
+        )
 
         if fecha:
             base_query = base_query.filter(Reserva.fecha == fecha)

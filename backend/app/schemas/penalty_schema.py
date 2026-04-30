@@ -27,3 +27,11 @@ class PenaltyUpdate(BaseModel):
     id_reserva: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PenaltySearchResponse(BaseModel):
+    items: list[PenaltyResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

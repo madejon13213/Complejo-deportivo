@@ -32,3 +32,11 @@ class CourtUpdate(BaseModel):
     id_tipo_espacio: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CourtSearchResponse(BaseModel):
+    items: list[CourtResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

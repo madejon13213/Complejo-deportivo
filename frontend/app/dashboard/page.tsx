@@ -12,28 +12,30 @@ import { useAuth } from "@/context/AuthContext";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getPenaltiesByUser } from "@/lib/services/penalties";
 import { getReservationsByUser } from "@/lib/services/reservations";
-import { Penalty, Reservation } from "@/lib/types";
+import { PenaltySearchResponse, ReservationSearchResponse } from "@/lib/types";
 
 export default function DashboardPage() {
   const { role, userId, isAdmin, isReady } = useAuth();
   const numericUserId = userId ? Number(userId) : null;
 
-  const reservationsQuery = useApiQuery<Reservation[]>(
-    () => getReservationsByUser(numericUserId || 0),
+  const reservationsQuery = useApiQuery<ReservationSearchResponse>(
+    () => getReservationsByUser(numericUserId || 0, 1, 10),
     [numericUserId],
     { enabled: isReady && Boolean(numericUserId) }
   );
 
-  const penaltiesQuery = useApiQuery<Penalty[]>(
-    () => getPenaltiesByUser(numericUserId || 0),
+  const penaltiesQuery = useApiQuery<PenaltySearchResponse>(
+    () => getPenaltiesByUser(numericUserId || 0, 1, 10),
     [numericUserId],
     { enabled: isReady && Boolean(numericUserId) }
   );
 
-  const reservations = reservationsQuery.data || [];
-  const penalties = penaltiesQuery.data || [];
+  const reservations = reservationsQuery.data?.items || [];
+  const reservationsTotal = reservationsQuery.data?.total || 0;
+  const penaltiesTotal = penaltiesQuery.data?.total || 0;
+
   const nextReservations = reservations
-    .filter((reservation) => reservation.estado !== "cancelada")
+    .filter((reservation) => reservation.estado !== "Cancelada")
     .sort((a, b) => `${a.fecha}${a.hora_inicio}`.localeCompare(`${b.fecha}${b.hora_inicio}`))
     .slice(0, 3);
 
@@ -47,11 +49,11 @@ export default function DashboardPage() {
         </header>
 
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <StatCard title="Total reservas" value={String(reservations.length)} icon={<Calendar size={18} />} />
+          <StatCard title="Total reservas" value={String(reservationsTotal)} icon={<Calendar size={18} />} />
           <StatCard title="Proximas" value={String(nextReservations.length)} icon={<Clock size={18} />} />
           <StatCard
             title="Penalizaciones"
-            value={penaltiesQuery.loading ? "..." : String(penalties.length)}
+            value={penaltiesQuery.loading ? "..." : String(penaltiesTotal)}
             icon={<AlertTriangle size={18} />}
           />
         </section>

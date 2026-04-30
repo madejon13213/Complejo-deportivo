@@ -12,17 +12,35 @@ from app.tables.tables import Penalizacion
 
 class PenaltyService:
     @staticmethod
-    def get_all_penalties(db: Session):
+    def get_all_penalties_paginated(db: Session, page: int, limit: int):
         repo = PenaltyRepository(db)
         try:
-            penalties = repo.get_all()
-            logger.info("[PenaltyService.get_all_penalties] total=%s", len(penalties))
-            return penalties
+            items, total = repo.get_all_paginated(page, limit)
+            logger.info("[PenaltyService.get_all_penalties_paginated] page=%s total=%s", page, total)
+            return {
+                "items": items,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "total_pages": (total + limit - 1) // limit,
+            }
+        except Exception:
+            logger.exception("[PenaltyService.get_all_penalties_paginated] error")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al obtener penalizaciones paginadas",
+            )
+
+    @staticmethod
+    def get_all_penalties(db: Session):
+        penalty_repo = PenaltyRepository(db)
+        try:
+            return penalty_repo.get_all()
         except Exception:
             logger.exception("[PenaltyService.get_all_penalties] error")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error al obtener penalizaciones",
+                detail="Error al recuperar penalizaciones",
             )
 
     @staticmethod
@@ -96,17 +114,35 @@ class PenaltyService:
             )
 
     @staticmethod
+    def get_penalties_by_user_paginated(id_user: int, db: Session, page: int, limit: int):
+        repo = PenaltyRepository(db)
+        try:
+            items, total = repo.get_by_user_paginated(id_user, page, limit)
+            logger.info("[PenaltyService.get_penalties_by_user_paginated] user_id=%s page=%s total=%s", id_user, page, total)
+            return {
+                "items": items,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "total_pages": (total + limit - 1) // limit,
+            }
+        except Exception:
+            logger.exception("[PenaltyService.get_penalties_by_user_paginated] error user_id=%s", id_user)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al obtener penalizaciones paginadas",
+            )
+
+    @staticmethod
     def get_penalties_by_user(id_user: int, db: Session):
         repo = PenaltyRepository(db)
         try:
-            penalties = repo.get_by_user(id_user)
-            logger.info("[PenaltyService.get_penalties_by_user] user_id=%s total=%s", id_user, len(penalties))
-            return penalties
+            return repo.get_by_user(id_user)
         except Exception:
             logger.exception("[PenaltyService.get_penalties_by_user] error user_id=%s", id_user)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Error al obtener penalizaciones",
+                detail="Error al obtener penalizaciones del usuario",
             )
 
     @staticmethod

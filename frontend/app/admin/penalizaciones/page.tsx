@@ -1,14 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import PenalizationForm from "@/app/components/Modals/PenalizationForm";
 import DataTable from "@/app/components/Tables/DataTable";
 import Toast from "@/app/components/UI/Toast";
+import Pagination from "@/app/components/UI/Pagination";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getAllPenalties } from "@/lib/services/penalties";
-import { Penalty } from "@/lib/types";
+import { Penalty, PenaltySearchResponse } from "@/lib/types";
+
+const LIMIT = 10;
 
 export default function AdminPenalizacionesPage() {
-  const penaltiesQuery = useApiQuery<Penalty[]>(() => getAllPenalties(), []);
+  const [page, setPage] = useState(1);
+  const penaltiesQuery = useApiQuery<PenaltySearchResponse>(() => getAllPenalties(page, LIMIT), [page]);
 
   const columns = [
     {
@@ -37,14 +42,27 @@ export default function AdminPenalizacionesPage() {
     },
   ];
 
+  const rows = penaltiesQuery.data?.items || [];
+  const totalPages = penaltiesQuery.data?.total_pages || 0;
+
   return (
     <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-4xl font-medium tracking-tight">Admin · Penalizaciones</h1>
+        <h1 className="text-4xl font-medium tracking-tight text-white">Admin · Penalizaciones</h1>
         <PenalizationForm onSuccess={penaltiesQuery.refetch} />
       </div>
+
       {penaltiesQuery.error && <Toast kind="error" message={penaltiesQuery.error} />}
-      <DataTable rows={penaltiesQuery.data || []} columns={columns} emptyMessage="No hay penalizaciones registradas." />
+      
+      <div className="space-y-6">
+        <DataTable rows={rows} columns={columns} emptyMessage="No hay penalizaciones registradas." />
+        
+        <Pagination 
+          currentPage={page} 
+          totalPages={totalPages} 
+          onPageChange={setPage} 
+        />
+      </div>
     </div>
   );
 }

@@ -19,3 +19,11 @@ class SpaceUpdate(BaseModel):
     permite_reserva_parcial: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SpaceSearchResponse(BaseModel):
+    items: list[SpaceResponse]
+    total: int
+    page: int
+    limit: int
+    total_pages: int

@@ -85,6 +85,9 @@ class Reserva(Base):
     id_espacio: Mapped[int] = mapped_column(ForeignKey("espacio.id"))
     version_id: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
+    usuario_rel: Mapped["Usuario"] = relationship()
+    espacio_rel: Mapped["Espacio"] = relationship()
+
     __table_args__ = (
         CheckConstraint("hora_fin > hora_inicio", name="chk_reserva_horas"),
     )

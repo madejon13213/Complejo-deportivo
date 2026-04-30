@@ -6,17 +6,22 @@ import { useParams } from "next/navigation";
 import Sidebar from "@/app/components/Layout/Sidebar";
 import Spinner from "@/app/components/UI/Spinner";
 import Toast from "@/app/components/UI/Toast";
+import Pagination from "@/app/components/UI/Pagination";
 import { useAuth } from "@/context/AuthContext";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getPenaltiesByUserAsAdmin } from "@/lib/services/penalties";
 import { getReservationsByUserAsAdmin } from "@/lib/services/reservations";
 import { getUserById } from "@/lib/services/users";
-import { Penalty, Reservation, User } from "@/lib/types";
+import { User, ReservationSearchResponse, PenaltySearchResponse } from "@/lib/types";
+
+const LIMIT = 5;
 
 export default function AdminUserProfilePage() {
   const params = useParams<{ id: string }>();
   const { isAdmin, isReady } = useAuth();
   const [activeTab, setActiveTab] = useState<"reservas" | "penalizaciones">("reservas");
+  const [resPage, setResPage] = useState(1);
+  const [penPage, setPenPage] = useState(1);
 
   const userId = Number(params.id);
 
@@ -24,49 +29,62 @@ export default function AdminUserProfilePage() {
     enabled: isReady && isAdmin && Number.isFinite(userId),
   });
 
-  const reservationsQuery = useApiQuery<Reservation[]>(() => getReservationsByUserAsAdmin(userId), [userId], {
-    enabled: isReady && isAdmin && Number.isFinite(userId),
-  });
+  const reservationsQuery = useApiQuery<ReservationSearchResponse>(
+    () => getReservationsByUserAsAdmin(userId, resPage, LIMIT),
+    [userId, resPage],
+    { enabled: isReady && isAdmin && Number.isFinite(userId) }
+  );
 
-  const penaltiesQuery = useApiQuery<Penalty[]>(() => getPenaltiesByUserAsAdmin(userId), [userId], {
-    enabled: isReady && isAdmin && Number.isFinite(userId),
-  });
+  const penaltiesQuery = useApiQuery<PenaltySearchResponse>(
+    () => getPenaltiesByUserAsAdmin(userId, penPage, LIMIT),
+    [userId, penPage],
+    { enabled: isReady && isAdmin && Number.isFinite(userId) }
+  );
 
   const content = useMemo(() => {
     if (activeTab === "reservas") {
       if (reservationsQuery.loading) return <Spinner />;
       if (reservationsQuery.error) return <Toast kind="error" message={reservationsQuery.error} />;
-      const reservations = reservationsQuery.data || [];
+      const reservations = reservationsQuery.data?.items || [];
+      const totalPages = reservationsQuery.data?.total_pages || 0;
+
       if (!reservations.length) {
         return <p className="text-sm text-gray-300">Este usuario no tiene reservas registradas.</p>;
       }
 
       return (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="border-b border-white/10 text-left text-gray-300">
-              <tr>
-                <th className="px-3 py-2">ID</th>
-                <th className="px-3 py-2">Espacio</th>
-                <th className="px-3 py-2">Fecha</th>
-                <th className="px-3 py-2">Hora</th>
-                <th className="px-3 py-2">Total</th>
-                <th className="px-3 py-2">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reservations.map((reservation) => (
-                <tr key={reservation.id} className="border-b border-white/10">
-                  <td className="px-3 py-2">{reservation.id}</td>
-                  <td className="px-3 py-2">{reservation.id_espacio}</td>
-                  <td className="px-3 py-2">{reservation.fecha}</td>
-                  <td className="px-3 py-2">{reservation.hora_inicio} - {reservation.hora_fin}</td>
-                  <td className="px-3 py-2">{Number(reservation.precio_total || 0).toFixed(2)} €</td>
-                  <td className="px-3 py-2">{reservation.estado}</td>
+        <div className="space-y-4">
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="border-b border-white/10 text-left text-gray-300">
+                <tr>
+                  <th className="px-3 py-2">ID</th>
+                  <th className="px-3 py-2">Espacio</th>
+                  <th className="px-3 py-2">Fecha</th>
+                  <th className="px-3 py-2">Hora</th>
+                  <th className="px-3 py-2">Total</th>
+                  <th className="px-3 py-2">Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {reservations.map((reservation) => (
+                  <tr key={reservation.id} className="border-b border-white/10">
+                    <td className="px-3 py-2">{reservation.id}</td>
+                    <td className="px-3 py-2">{reservation.id_espacio}</td>
+                    <td className="px-3 py-2">{reservation.fecha}</td>
+                    <td className="px-3 py-2">{reservation.hora_inicio} - {reservation.hora_fin}</td>
+                    <td className="px-3 py-2">{Number(reservation.precio_total || 0).toFixed(2)} €</td>
+                    <td className="px-3 py-2">{reservation.estado}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination 
+            currentPage={resPage} 
+            totalPages={totalPages} 
+            onPageChange={setResPage} 
+          />
         </div>
       );
     }
@@ -74,36 +92,45 @@ export default function AdminUserProfilePage() {
     if (penaltiesQuery.loading) return <Spinner />;
     if (penaltiesQuery.error) return <Toast kind="error" message={penaltiesQuery.error} />;
 
-    const penalties = penaltiesQuery.data || [];
+    const penalties = penaltiesQuery.data?.items || [];
+    const totalPages = penaltiesQuery.data?.total_pages || 0;
+
     if (!penalties.length) {
       return <p className="text-sm text-gray-300">Este usuario no tiene penalizaciones registradas.</p>;
     }
 
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="border-b border-white/10 text-left text-gray-300">
-            <tr>
-              <th className="px-3 py-2">ID</th>
-              <th className="px-3 py-2">Reserva</th>
-              <th className="px-3 py-2">Motivo</th>
-              <th className="px-3 py-2">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {penalties.map((penalty) => (
-              <tr key={penalty.id} className="border-b border-white/10">
-                <td className="px-3 py-2">{penalty.id}</td>
-                <td className="px-3 py-2">{penalty.id_reserva}</td>
-                <td className="px-3 py-2">{penalty.tipo_penalizacion}</td>
-                <td className="px-3 py-2">{penalty.fecha_inicio}</td>
+      <div className="space-y-4">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="border-b border-white/10 text-left text-gray-300">
+              <tr>
+                <th className="px-3 py-2">ID</th>
+                <th className="px-3 py-2">Reserva</th>
+                <th className="px-3 py-2">Motivo</th>
+                <th className="px-3 py-2">Fecha</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {penalties.map((penalty) => (
+                <tr key={penalty.id} className="border-b border-white/10">
+                  <td className="px-3 py-2">{penalty.id}</td>
+                  <td className="px-3 py-2">{penalty.id_reserva}</td>
+                  <td className="px-3 py-2">{penalty.tipo_penalizacion}</td>
+                  <td className="px-3 py-2">{penalty.fecha_inicio}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Pagination 
+          currentPage={penPage} 
+          totalPages={totalPages} 
+          onPageChange={setPenPage} 
+        />
       </div>
     );
-  }, [activeTab, penaltiesQuery.data, penaltiesQuery.error, penaltiesQuery.loading, reservationsQuery.data, reservationsQuery.error, reservationsQuery.loading]);
+  }, [activeTab, penaltiesQuery.data, penaltiesQuery.error, penaltiesQuery.loading, reservationsQuery.data, reservationsQuery.error, reservationsQuery.loading, resPage, penPage]);
 
   if (!isReady) {
     return (

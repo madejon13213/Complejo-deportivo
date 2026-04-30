@@ -47,14 +47,26 @@ export default function NotificationsPage() {
                 key={notification.id}
                 type="button"
                 onClick={async () => {
-                  await markNotificationAsRead(notification.id);
+                  if (!notification.leida) {
+                    await markNotificationAsRead(notification.id);
+                  }
                 }}
-                className="w-full rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-left text-white transition"
+                className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                  notification.leida
+                    ? "border-white/5 bg-white/5 opacity-60"
+                    : "border-blue-400/30 bg-blue-500/10 text-white hover:bg-blue-500/20"
+                }`}
               >
-                <div className="text-xs font-semibold uppercase tracking-wide text-[#9bb3ff]">
+                <div className={`text-xs font-semibold uppercase tracking-wide ${
+                  notification.leida ? "text-gray-400" : "text-[#9bb3ff]"
+                }`}>
                   {formatNotificationType(notification.tipo)}
                 </div>
-                <div className="mt-1 text-sm leading-6">{notification.mensaje}</div>
+                <div className={`mt-1 text-sm leading-6 ${
+                  notification.leida ? "text-gray-400" : "text-white"
+                }`}>
+                  {notification.mensaje}
+                </div>
               </button>
             ))}
           </div>

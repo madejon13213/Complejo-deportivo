@@ -14,6 +14,8 @@
 - [Pistas (Courts)](#pistas-courts)
 - [Reservas](#reservas)
 - [Penalizaciones](#penalizaciones)
+- [Notificaciones](#notificaciones)
+- [Admin](#admin)
 - [Códigos de Error](#códigos-de-error)
 
 ---
@@ -359,26 +361,34 @@ Obtiene la lista de todos los tipos de espacios disponibles.
 
 **Autenticación**: PUBLIC
 
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
 #### Response 200 (OK)
 
 ```json
-[
-  {
-    "id": 1,
-    "tipo": "Cancha de Tenis",
-    "permite_reserva_parcial": true
-  },
-  {
-    "id": 2,
-    "tipo": "Piscina Olímpica",
-    "permite_reserva_parcial": false
-  },
-  {
-    "id": 3,
-    "tipo": "Gimnasio",
-    "permite_reserva_parcial": true
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "tipo": "Cancha de Tenis",
+      "permite_reserva_parcial": true
+    },
+    {
+      "id": 2,
+      "tipo": "Piscina Olímpica",
+      "permite_reserva_parcial": false
+    }
+  ],
+  "total": 3,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
 ```
 
 #### Errores Posibles
@@ -405,41 +415,34 @@ Obtiene la lista de todas las pistas disponibles.
 Authorization: Bearer {token}
 ```
 
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
 #### Response 200 (OK)
 
 ```json
-[
-  {
-    "id": 1,
-    "nombre": "Cancha Tenis 1",
-    "precio_hora": 45.50,
-    "capacidad": 4,
-    "precio_hora_parcial": 25.00,
-    "id_tipo_espacio": 1,
-    "tipo_espacio": "Cancha de Tenis",
-    "permite_reserva_parcial": true
-  },
-  {
-    "id": 2,
-    "nombre": "Cancha Tenis 2",
-    "precio_hora": 45.50,
-    "capacidad": 4,
-    "precio_hora_parcial": 25.00,
-    "id_tipo_espacio": 1,
-    "tipo_espacio": "Cancha de Tenis",
-    "permite_reserva_parcial": true
-  },
-  {
-    "id": 3,
-    "nombre": "Piscina Principal",
-    "precio_hora": 60.00,
-    "capacidad": 30,
-    "precio_hora_parcial": null,
-    "id_tipo_espacio": 2,
-    "tipo_espacio": "Piscina Olímpica",
-    "permite_reserva_parcial": false
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "nombre": "Cancha Tenis 1",
+      "precio_hora": 45.50,
+      "capacidad": 4,
+      "precio_hora_parcial": 25.00,
+      "id_tipo_espacio": 1,
+      "tipo_espacio": "Cancha de Tenis",
+      "permite_reserva_parcial": true
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
 ```
 
 #### Errores Posibles
@@ -761,6 +764,62 @@ Authorization: Bearer {token}
 
 ---
 
+### GET /reservations/search
+
+Busca reservas con filtros opcionales (Paginated).
+
+**Descripción**: Permite buscar reservas filtrando por fecha y/o nombre de usuario.
+
+**Autenticación**: Requerida
+
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| fecha | string | Fecha (YYYY-MM-DD) | null |
+| usuario | string | Nombre o email del usuario | null |
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
+#### Headers
+
+```
+Authorization: Bearer {token}
+```
+
+#### Response 200 (OK)
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "fecha": "2024-05-15",
+      "hora_inicio": "10:00:00",
+      "hora_fin": "11:00:00",
+      "estado": "confirmada",
+      "plazas_parciales": null,
+      "tipo_reserva": "completa",
+      "precio_total": 45.50,
+      "id_user": 1,
+      "id_espacio": 1,
+      "usuario_nombre": "Juan Pérez"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
+```
+
+#### Errores Posibles
+
+| Código | Descripción |
+|--------|-------------|
+| 401 | Token inválido o expirado |
+| 500 | Error en el servidor |
+
 ### GET /reservations/user/{id}
 
 Obtiene todas las reservas de un usuario específico.
@@ -781,33 +840,36 @@ Obtiene todas las reservas de un usuario específico.
 Authorization: Bearer {token}
 ```
 
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+| status_group | string | Filtro de estado (ej: 'upcoming', 'past') | null |
+
 #### Response 200 (OK)
 
 ```json
-[
-  {
-    "id": 1,
-    "fecha": "2024-05-15",
-    "hora_inicio": "10:00:00",
-    "hora_fin": "11:00:00",
-    "estado": "confirmada",
-    "plazas_parciales": null,
-    "tipo_reserva": "completa",
-    "id_user": 1,
-    "id_espacio": 1
-  },
-  {
-    "id": 5,
-    "fecha": "2024-06-10",
-    "hora_inicio": "15:00:00",
-    "hora_fin": "16:30:00",
-    "estado": "confirmada",
-    "plazas_parciales": 3,
-    "tipo_reserva": "parcial",
-    "id_user": 1,
-    "id_espacio": 2
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "fecha": "2024-05-15",
+      "hora_inicio": "10:00:00",
+      "hora_fin": "11:00:00",
+      "estado": "confirmada",
+      "plazas_parciales": null,
+      "tipo_reserva": "completa",
+      "id_user": 1,
+      "id_espacio": 1
+    }
+  ],
+  "total": 10,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
 ```
 
 #### Errores Posibles
@@ -939,6 +1001,43 @@ Authorization: Bearer {token}
 
 ---
 
+### POST /reservations/estimate
+
+Estima el precio de una posible reserva.
+
+**Descripción**: Calcula el precio estimado basado en el horario, espacio y número de personas.
+
+**Autenticación**: Requerida
+
+#### Request Body
+
+```json
+{
+  "hora_inicio": "09:00:00",
+  "hora_fin": "10:00:00",
+  "id_espacio": 1,
+  "numero_personas": 1
+}
+```
+
+#### Response 200 (OK)
+
+```json
+{
+  "precio_estimado": 45.50
+}
+```
+
+#### Errores Posibles
+
+| Código | Descripción |
+|--------|-------------|
+| 401 | Token inválido o expirado |
+| 404 | Espacio no encontrado |
+| 500 | Error en el servidor |
+
+---
+
 ### PUT /reservations/update/{id}
 
 Actualiza una reserva existente.
@@ -1059,25 +1158,31 @@ Obtiene todas las penalizaciones registradas.
 Authorization: Bearer {token}
 ```
 
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
 #### Response 200 (OK)
 
 ```json
-[
-  {
-    "id": 1,
-    "fecha_inicio": "2024-05-15",
-    "fecha_fin": "2024-05-22",
-    "tipo_penalizacion": "no_show",
-    "id_reserva": 1
-  },
-  {
-    "id": 2,
-    "fecha_inicio": "2024-05-20",
-    "fecha_fin": "2024-05-27",
-    "tipo_penalizacion": "cancelacion_tardía",
-    "id_reserva": 5
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "fecha_inicio": "2024-05-15",
+      "fecha_fin": "2024-05-22",
+      "tipo_penalizacion": "no_show",
+      "id_reserva": 1
+    }
+  ],
+  "total": 5,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
 ```
 
 #### Errores Posibles
@@ -1151,25 +1256,31 @@ Obtiene todas las penalizaciones de un usuario específico.
 Authorization: Bearer {token}
 ```
 
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
 #### Response 200 (OK)
 
 ```json
-[
-  {
-    "id": 1,
-    "fecha_inicio": "2024-05-15",
-    "fecha_fin": "2024-05-22",
-    "tipo_penalizacion": "no_show",
-    "id_reserva": 1
-  },
-  {
-    "id": 3,
-    "fecha_inicio": "2024-05-20",
-    "fecha_fin": "2024-05-27",
-    "tipo_penalizacion": "cancelacion_tardía",
-    "id_reserva": 7
-  }
-]
+{
+  "items": [
+    {
+      "id": 1,
+      "fecha_inicio": "2024-05-15",
+      "fecha_fin": "2024-05-22",
+      "tipo_penalizacion": "no_show",
+      "id_reserva": 1
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
 ```
 
 #### Errores Posibles
@@ -1221,6 +1332,176 @@ Authorization: Bearer {token}
 | 401 | Token inválido o expirado |
 | 404 | Reserva no encontrada o sin penalización asociada |
 | 500 | Error en el servidor |
+
+---
+
+## Notificaciones
+
+### GET /notifications/unread
+
+Obtiene las notificaciones no leídas del usuario actual.
+
+**Autenticación**: Requerida
+
+#### Response 200 (OK)
+
+```json
+[
+  {
+    "id": 1,
+    "tipo": "cancelacion",
+    "mensaje": "Tu reserva ha sido cancelada",
+    "leida": false,
+    "creada_en": "2024-05-15T10:00:00",
+    "id_user": 1,
+    "id_reserva": 10
+  }
+]
+```
+
+---
+
+### GET /notifications/my
+
+Obtiene todas las notificaciones del usuario actual (Paginated).
+
+**Autenticación**: Requerida
+
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| limit | integer | Límite de notificaciones | 25 |
+
+#### Response 200 (OK)
+
+```json
+[
+  {
+    "id": 1,
+    "tipo": "cancelacion",
+    "mensaje": "Tu reserva ha sido cancelada",
+    "leida": true,
+    "creada_en": "2024-05-15T10:00:00",
+    "id_user": 1,
+    "id_reserva": 10
+  }
+]
+```
+
+---
+
+### POST /notifications/mark-read
+
+Marca una notificación como leída mediante el cuerpo del request.
+
+**Autenticación**: Requerida
+
+#### Request Body
+
+```json
+{
+  "notification_id": 1
+}
+```
+
+#### Response 200 (OK)
+
+```json
+{
+  "id": 1,
+  "tipo": "cancelacion",
+  "mensaje": "Tu reserva ha sido cancelada",
+  "leida": true,
+  "creada_en": "2024-05-15T10:00:00",
+  "id_user": 1,
+  "id_reserva": 10
+}
+```
+
+---
+
+### PUT /notifications/{notification_id}/read
+
+Marca una notificación como leída mediante el ID en el path.
+
+**Autenticación**: Requerida
+
+#### Path Parameters
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| notification_id | integer | ID de la notificación |
+
+#### Response 200 (OK)
+
+```json
+{
+  "id": 1,
+  "tipo": "cancelacion",
+  "mensaje": "Tu reserva ha sido cancelada",
+  "leida": true,
+  "creada_en": "2024-05-15T10:00:00",
+  "id_user": 1,
+  "id_reserva": 10
+}
+```
+
+---
+
+## Admin
+
+### GET /admin/users/{user_id}/reservations
+
+Obtiene las reservas de un usuario específico (Solo Admin, Paginated).
+
+**Autenticación**: Admin Requerida
+
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
+#### Response 200 (OK)
+
+```json
+{
+  "items": [...],
+  "total": 10,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
+```
+
+---
+
+### GET /admin/users/{user_id}/penalties
+
+Obtiene las penalizaciones de un usuario específico (Solo Admin, Paginated).
+
+**Autenticación**: Admin Requerida
+
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción | Default |
+|-----------|------|-------------|---------|
+| page | integer | Número de página | 1 |
+| limit | integer | Elementos por página | 20 |
+
+#### Response 200 (OK)
+
+```json
+{
+  "items": [...],
+  "total": 5,
+  "page": 1,
+  "limit": 20,
+  "total_pages": 1
+}
+```
 
 ---
 

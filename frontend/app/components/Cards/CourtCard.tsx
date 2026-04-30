@@ -21,9 +21,6 @@ export default function CourtCard({ court }: CourtCardProps) {
         <p className="inline-flex items-center gap-1 text-sm text-gray-300">
           <Users size={14} /> Capacidad: {court.capacidad ?? 0}
         </p>
-        <p className="inline-flex items-center gap-1 text-sm text-gray-300">
-          <Star size={14} /> {court.rating ?? 4.5}
-        </p>
       </div>
       <div className="mt-4 flex gap-2">
         <Link href={`/courts/${court.id}`} className="flex-1">

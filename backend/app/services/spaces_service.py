@@ -23,3 +23,13 @@ class SpaceService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Error al intentar recuperar la lista de espacios de la base de datos",
             )
+    @staticmethod
+    def get_all_types(db: Session):
+        repo = SpaceRepository(db)
+        try:
+            return repo.get_all()
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Error al intentar recuperar todos los tipos de espacios",
+            )

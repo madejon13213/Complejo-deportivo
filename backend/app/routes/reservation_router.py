@@ -64,18 +64,24 @@ def get_active_reservations(
     return ReservationService.get_active_reservations(db)
 
 
-@router.get("/user/{id}", response_model=list[ReservationResponse], status_code=status.HTTP_200_OK)
+@router.get("/user/{id}", response_model=ReservationSearchResponse, status_code=status.HTTP_200_OK)
 def get_user_reservations(
     id: int,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    status_group: Optional[str] = Query(default=None),
     current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
     db: Session = Depends(get_db),
 ):
     logger.info(
-        "[reservation_router.get_user_reservations] requested_by=%s target_user_id=%s",
+        "[reservation_router.get_user_reservations] requested_by=%s target_user_id=%s page=%s limit=%s status_group=%s",
         current_user.get("id") or current_user.get("sub"),
         id,
+        page,
+        limit,
+        status_group,
     )
-    return ReservationService.get_user_reservations(id, db)
+    return ReservationService.get_user_reservations_paginated(id, db, page, limit, status_group)
 
 
 @router.get("/space/{id}", response_model=list[ReservationResponse], status_code=status.HTTP_200_OK)
