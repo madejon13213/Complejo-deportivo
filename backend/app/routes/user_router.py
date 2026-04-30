@@ -26,8 +26,12 @@ def logout(request: Request, response: Response):
 
 
 @router.get("/me", status_code=status.HTTP_200_OK)
-def get_me(current_user: Dict[str, Any] = Depends(AuthManager.get_current_user)):
-    return current_user
+def get_me(
+    current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
+    db: Session = Depends(get_db),
+):
+    user_id = current_user.get("id") or current_user.get("sub")
+    return UserService.get_user(int(user_id), db)
 
 
 @router.get("/getAll", response_model=list[UserResponse], status_code=status.HTTP_200_OK)

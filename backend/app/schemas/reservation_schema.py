@@ -4,6 +4,17 @@ from typing import Optional
 from pydantic import BaseModel, ConfigDict
 
 
+class ReservationEstimateRequest(BaseModel):
+    hora_inicio: time
+    hora_fin: time
+    id_espacio: int
+    numero_personas: Optional[int] = 1
+
+class ReservationEstimateResponse(BaseModel):
+    precio_estimado: float
+
+
+
 class ReservationResponse(BaseModel):
     id: int
     fecha: date

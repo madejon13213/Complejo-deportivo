@@ -18,9 +18,9 @@ export default function Sidebar() {
     { href: "/profile", label: "Perfil", icon: <User size={16} /> },
     { href: "/penalties", label: "Penalizaciones", icon: <AlertTriangle size={16} /> },
     { href: "/notifications", label: "Notificaciones", icon: <Bell size={16} />, hasBadge: true },
-  ];
+  ] as Array<{ href: string; label: string; icon: React.ReactElement; hasBadge?: boolean }>;
 
-  const adminLinks = [
+  const adminLinks: { href: string; label: string; icon: React.ReactElement }[] = [
     { href: "/admin/usuarios", label: "Admin usuarios", icon: <Shield size={16} /> },
     { href: "/admin/reservas", label: "Admin reservas", icon: <Shield size={16} /> },
     { href: "/admin/penalizaciones", label: "Admin penalizaciones", icon: <Shield size={16} /> },
@@ -45,7 +45,7 @@ export default function Sidebar() {
               {item.icon}
               {item.label}
             </span>
-            {item.hasBadge && unreadNotificationsCount > 0 && (
+            {(item as any).hasBadge && unreadNotificationsCount > 0 && (
               <span className="inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
                 {unreadNotificationsCount > 9 ? "+9" : unreadNotificationsCount}
               </span>

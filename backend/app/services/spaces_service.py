@@ -6,11 +6,18 @@ from app.repositories.space_repository import SpaceRepository
 
 class SpaceService:
     @staticmethod
-    def get_all_spaces(db: Session):
+    def get_all_spaces(db: Session, page: int = 1, limit: int = 20):
         repo = SpaceRepository(db)
         try:
-            espacios = repo.get_all()
-            return espacios
+            items, total = repo.get_all_paginated(page, limit)
+            total_pages = max(1, (total + limit - 1) // limit)
+            return {
+                "items": items,
+                "total": total,
+                "page": page,
+                "limit": limit,
+                "total_pages": total_pages,
+            }
         except Exception:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

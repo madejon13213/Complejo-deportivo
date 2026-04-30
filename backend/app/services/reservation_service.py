@@ -15,6 +15,8 @@ from app.schemas.reservation_schema import (
     ReservationSearchItem,
     ReservationSearchResponse,
     ReservationUpdate,
+    ReservationEstimateRequest,
+    ReservationEstimateResponse,
 )
 from app.services.notification_service import NotificationService
 from app.tables.tables import Espacio, Reserva
@@ -58,7 +60,7 @@ class ReservationService:
     def _calculate_total_price(reservation: Reserva, space: Espacio, allows_partial: bool) -> float:
         duration = ReservationService._duration_hours(reservation.hora_inicio, reservation.hora_fin)
         if allows_partial and ReservationService._uses_partial(reservation):
-            unit_price = float(space.precio_hora_parcial or (float(space.precio_hora) / max(1, int(space.capacidad))))
+            unit_price = float(space.precio_hora) / max(1, int(space.capacidad))
             units = max(1, int(reservation.plazas_parciales or 1))
             return round(duration * unit_price * units, 2)
 
@@ -366,8 +368,8 @@ class ReservationService:
                         user_id=conflict.id_user,
                         tipo="RESERVA_CANCELADA",
                         mensaje=(
-                            "Tu reserva fue cancelada por una sobrescritura de disponibilidad "
-                            f"({role})."
+                            f"Tu reserva en '{space.nombre}' para el día {conflict.fecha} a las {conflict.hora_inicio.strftime('%H:%M')} "
+                            f"ha sido cancelada por una sobrescritura de disponibilidad ({role})."
                         ),
                         id_reserva=conflict.id,
                     )
@@ -399,6 +401,26 @@ class ReservationService:
             )
 
     @staticmethod
+    def estimate_price(data: ReservationEstimateRequest, db: Session) -> ReservationEstimateResponse:
+        court_repo = CourtRepository(db)
+        space = court_repo.get_by_id(data.id_espacio)
+        if not space:
+            raise HTTPException(status_code=404, detail="Espacio no encontrado")
+        
+        allows_partial = bool(getattr(space, "tipo_espacio_rel", None) and space.tipo_espacio_rel.permite_reserva_parcial)
+        
+        class MockReservation:
+            hora_inicio = data.hora_inicio
+            hora_fin = data.hora_fin
+            tipo_reserva = "parcial" if allows_partial else "completa"
+            plazas_parciales = data.numero_personas if allows_partial else None
+            
+        mock_res = MockReservation()
+        
+        precio_estimado = ReservationService._calculate_total_price(mock_res, space, allows_partial) # type: ignore
+        return ReservationEstimateResponse(precio_estimado=precio_estimado)
+
+    @staticmethod
     def update_reservation(reservation_id: int, reservation_data: ReservationUpdate, db: Session) -> ReservationResponse:
         repo = ReservationRepository(db)
         court_repo = CourtRepository(db)
@@ -411,15 +433,31 @@ class ReservationService:
                     detail=f"Reserva con ID {reservation_id} no encontrada",
                 )
 
+            old_status = reservation.estado
             for field, value in reservation_data.dict().items():
                 if value is not None:
                     setattr(reservation, field, value)
 
-            reservation.estado = ReservationService._compute_status(
-                reservation.fecha,
-                reservation.hora_inicio,
-                reservation.hora_fin,
-            )
+            # Si no se mandó un estado explícito, calculamos el nuevo estado según el tiempo.
+            # (El método _compute_status nunca retorna 'Cancelada')
+            if reservation_data.estado is None:
+                reservation.estado = ReservationService._compute_status(
+                    reservation.fecha,
+                    reservation.hora_inicio,
+                    reservation.hora_fin,
+                )
+
+            # Notificar si el estado ha cambiado a 'Cancelada'
+            if reservation.estado == "Cancelada" and old_status != "Cancelada":
+                space = court_repo.get_by_id(reservation.id_espacio)
+                space_name = space.nombre if space else "un espacio"
+                NotificationService.create_notification(
+                    db=db,
+                    user_id=reservation.id_user,
+                    tipo="RESERVA_CANCELADA",
+                    mensaje=f"Tu reserva en '{space_name}' para el día {reservation.fecha} a las {reservation.hora_inicio.strftime('%H:%M')} ha sido cancelada.",
+                    id_reserva=reservation.id,
+                )
 
             updated_reservation = repo.update(reservation)
             db.commit()
@@ -443,6 +481,7 @@ class ReservationService:
     @staticmethod
     def delete_reservation(reservation_id: int, db: Session) -> dict:
         repo = ReservationRepository(db)
+        court_repo = CourtRepository(db)
         try:
             pending_new = len(db.new)
             pending_dirty = len(db.dirty)
@@ -474,6 +513,17 @@ class ReservationService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="No se puede cancelar una reserva que ya ha comenzado o ha pasado",
                 )
+
+            # Enviar notificación de cancelación antes de borrar
+            space = court_repo.get_by_id(reservation.id_espacio)
+            space_name = space.nombre if space else "un espacio"
+            NotificationService.create_notification(
+                db=db,
+                user_id=reservation.id_user,
+                tipo="RESERVA_CANCELADA",
+                mensaje=f"Tu reserva en '{space_name}' para el día {reservation.fecha} a las {reservation.hora_inicio.strftime('%H:%M')} ha sido cancelada.",
+                id_reserva=None, # Ponemos None porque la reserva va a ser eliminada físicamente
+            )
 
             deleted = repo.delete_by_id(reservation_id)
             if deleted:

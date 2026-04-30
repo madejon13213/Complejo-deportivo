@@ -47,15 +47,9 @@ export default function NotificationsPage() {
                 key={notification.id}
                 type="button"
                 onClick={async () => {
-                  if (!notification.leida) {
-                    await markNotificationAsRead(notification.id);
-                  }
+                  await markNotificationAsRead(notification.id);
                 }}
-                className={`w-full rounded-xl border px-4 py-3 text-left transition ${
-                  notification.leida
-                    ? "border-white/10 bg-black/20 text-gray-300"
-                    : "border-blue-400/30 bg-blue-500/10 text-white"
-                }`}
+                className="w-full rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-left text-white transition"
               >
                 <div className="text-xs font-semibold uppercase tracking-wide text-[#9bb3ff]">
                   {formatNotificationType(notification.tipo)}

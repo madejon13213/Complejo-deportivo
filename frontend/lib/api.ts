@@ -24,11 +24,11 @@ function parseErrorMessage(payload: unknown): string {
   return "Error de servidor";
 }
 
-function isAuthRoute(pathname: string): boolean {
-  return pathname === "/login" || pathname === "/auth" || pathname === "/register";
+function isPublicRoute(pathname: string): boolean {
+  return pathname === "/" || pathname === "/login" || pathname === "/auth" || pathname === "/register";
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
   const headers = new Headers(init?.headers);
   if (!headers.has("Content-Type") && init?.body) {
     headers.set("Content-Type", "application/json");
@@ -42,6 +42,23 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     });
 
     if (!response.ok) {
+      // Manejo de refresh automático en caso de 401
+      if (response.status === 401 && !isRetry && !path.includes("/users/login") && !path.includes("/users/refresh")) {
+        try {
+          const refreshRes = await fetch(`${API_BASE}/users/refresh`, {
+            method: "POST",
+            credentials: "include",
+          });
+
+          if (refreshRes.ok) {
+            // Reintento de la petición original
+            return apiFetch<T>(path, init, true);
+          }
+        } catch (refreshErr) {
+          console.error("Error intentando refrescar token en apiFetch:", refreshErr);
+        }
+      }
+
       let payload: unknown;
       try {
         payload = await response.json();
@@ -53,7 +70,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 
       if (response.status === 401 && typeof window !== "undefined") {
         const currentPath = window.location.pathname;
-        if (!isAuthRoute(currentPath)) {
+        if (!isPublicRoute(currentPath)) {
           toast.error("Tu sesión ha caducado. Por favor, inicia sesión de nuevo.");
           window.location.assign("/login");
         }

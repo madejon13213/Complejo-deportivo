@@ -20,7 +20,7 @@ export default function Input({ label, icon, error, type = "text", ...props }: I
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>}
         <input
           type={isPassword && showPassword ? "text" : type}
-          className={`w-full rounded-2xl border border-white/20 bg-black/30 py-2 text-sm text-white placeholder:text-gray-500 ${icon ? "pl-10" : "pl-3"} pr-10 outline-none focus:border-[#6d82ff] focus:bg-black/40`}
+          className={`w-full rounded-2xl border border-white/20 bg-black/30 py-2 text-sm text-white placeholder:text-gray-500 ${icon ? "pl-10" : "pl-3"} pr-10 outline-none focus:border-[#6d82ff] focus:bg-black/40 ${props.className || ""}`}
           {...props}
         />
         {isPassword && (

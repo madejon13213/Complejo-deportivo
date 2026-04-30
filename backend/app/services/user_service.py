@@ -78,7 +78,7 @@ class UserService:
 
         rol_nombre = normalize_role(usuario.rol_rel.rol if usuario.rol_rel else ROLE_CLIENTE)
 
-        access_token = AuthManager.create_access_token(
+        access_token, expires_at = AuthManager.create_access_token(
             {"id": usuario.id, "name": usuario.nombre, "rol": rol_nombre}
         )
         refresh_token = AuthManager.create_refresh_token(usuario.id)
@@ -92,6 +92,7 @@ class UserService:
             "name": usuario.nombre,
             "email": usuario.email,
             "rol": rol_nombre,
+            "expires_at": expires_at,
             "mensaje": "Inicio de sesión exitoso",
         }
 

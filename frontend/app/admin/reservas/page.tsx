@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import ConfirmDeleteModal from "@/app/components/Modals/ConfirmDeleteModal";
 import Button from "@/app/components/UI/Button";
 import Input from "@/app/components/UI/Input";
 import Toast from "@/app/components/UI/Toast";
@@ -13,6 +14,11 @@ import { ReservationSearchItem } from "@/lib/types";
 const PAGE_SIZE = 20;
 
 interface PenaltyModalState {
+  open: boolean;
+  reservation: ReservationSearchItem | null;
+}
+
+interface DeleteModalState {
   open: boolean;
   reservation: ReservationSearchItem | null;
 }
@@ -42,6 +48,8 @@ export default function AdminReservasPage() {
   const [penaltyState, setPenaltyState] = useState<PenaltyModalState>({ open: false, reservation: null });
   const [penaltyReason, setPenaltyReason] = useState("");
   const [savingPenalty, setSavingPenalty] = useState(false);
+
+  const [deleteModal, setDeleteModal] = useState<DeleteModalState>({ open: false, reservation: null });
 
   const [refreshFlag, setRefreshFlag] = useState(0);
 
@@ -85,11 +93,17 @@ export default function AdminReservasPage() {
     return `Mostrando ${from}-${to} de ${total}`;
   }, [page, total]);
 
-  const onCancel = async (reservation: ReservationSearchItem) => {
+  const openDeleteModal = (reservation: ReservationSearchItem) => {
     if (!isFutureReservation(reservation)) {
       setFeedback({ kind: "warning", message: "No se puede cancelar una reserva pasada." });
       return;
     }
+    setDeleteModal({ open: true, reservation });
+  };
+
+  const onCancelConfirmed = async () => {
+    const reservation = deleteModal.reservation;
+    if (!reservation) return;
 
     setFeedback(null);
 
@@ -221,8 +235,9 @@ export default function AdminReservasPage() {
               )}
 
               {rows.map((row) => {
-                const canCancel = isFutureReservation(row);
-                const canPenalize = isAdmin && isPastReservation(row);
+                const isCancelled = row.estado?.toLowerCase().includes("cancel");
+                const canCancel = !isCancelled && isFutureReservation(row);
+                const canPenalize = isAdmin && isPastReservation(row) && !isCancelled;
 
                 return (
                   <tr key={row.id} className="border-b border-white/10">
@@ -235,7 +250,7 @@ export default function AdminReservasPage() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
                         {canCancel && (
-                          <Button variant="danger" onClick={() => onCancel(row)}>
+                          <Button variant="danger" onClick={() => openDeleteModal(row)}>
                             Cancelar
                           </Button>
                         )}
@@ -301,6 +316,17 @@ export default function AdminReservasPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, reservation: null })}
+        onConfirm={onCancelConfirmed}
+        message={
+          deleteModal.reservation
+            ? `¿Estás seguro de que deseas cancelar la reserva #${deleteModal.reservation.id} de ${deleteModal.reservation.usuario_nombre}?`
+            : "¿Estás seguro de que deseas cancelar esta reserva?"
+        }
+      />
     </div>
   );
 }

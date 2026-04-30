@@ -75,7 +75,7 @@ class NotificationService:
             )
 
     @staticmethod
-    def mark_notification_as_read(db: Session, user_id: int, notification_id: int) -> NotificationResponse:
+    def mark_notification_as_read(db: Session, user_id: int, notification_id: int) -> dict:
         repo = NotificationRepository(db)
         try:
             logger.info(
@@ -83,7 +83,7 @@ class NotificationService:
                 user_id,
                 notification_id,
             )
-            notification = repo.mark_as_read(notification_id=notification_id, user_id=user_id)
+            notification = repo.delete(notification_id=notification_id, user_id=user_id)
             if not notification:
                 logger.warning(
                     "[NotificationService.mark_notification_as_read] not found user_id=%s notification_id=%s",
@@ -93,8 +93,7 @@ class NotificationService:
                 raise HTTPException(status_code=404, detail="Notificación no encontrada")
 
             db.commit()
-            db.refresh(notification)
-            return notification
+            return {"message": "Notificación eliminada correctamente"}
         except HTTPException:
             raise
         except Exception:
@@ -106,5 +105,5 @@ class NotificationService:
             )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="No se pudo marcar la notificación como leída",
+                detail="No se pudo eliminar la notificación",
             )

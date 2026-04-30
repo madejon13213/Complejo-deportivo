@@ -18,6 +18,7 @@ interface AuthState {
   isClub: boolean;
   isAuthenticated: boolean;
   isReady: boolean;
+  expiresAt: number | null;
 }
 
 interface LoginPayload {
@@ -25,6 +26,7 @@ interface LoginPayload {
   sub?: number | string;
   rol?: string;
   role?: string;
+  expires_at?: number;
 }
 
 interface AuthContextType extends AuthState {
@@ -45,6 +47,7 @@ const initialState: AuthState = {
   isClub: false,
   isAuthenticated: false,
   isReady: false,
+  expiresAt: null,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -73,12 +76,13 @@ function parseRole(payload: LoginPayload): AuthState {
     isClub: role === "CLUB",
     isAuthenticated: true,
     isReady: true,
+    expiresAt: payload.expires_at ?? (payload as any).exp ?? null,
   };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const refreshInFlightRef = useRef(false);
   const isUnmountedRef = useRef(false);
@@ -87,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const stopRefreshTimer = useCallback(() => {
     if (refreshTimerRef.current) {
-      clearInterval(refreshTimerRef.current);
+      clearTimeout(refreshTimerRef.current);
       refreshTimerRef.current = null;
     }
   }, []);
@@ -121,9 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const markNotificationAsRead = useCallback(async (notificationId: number) => {
     await markNotificationRead(notificationId);
     setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId ? { ...notification, leida: true } : notification
-      )
+      prev.filter((notification) => notification.id !== notificationId)
     );
   }, []);
 
@@ -148,8 +150,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
 
+      const refreshData = await refreshResponse.json();
       const user = await apiFetch<LoginPayload>("/users/me", { method: "GET", cache: "no-store" });
-      setAuth(parseRole(user));
+      
+      // Combinamos la info de /me con el expires_at del refresh
+      setAuth(parseRole({ ...user, expires_at: refreshData.expires_at }));
       return true;
     } catch {
       return false;
@@ -196,24 +201,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [auth.isAuthenticated, refreshNotifications]);
 
+  // Lógica de autorefresco basada en expiración
   useEffect(() => {
-    if (!auth.isAuthenticated) {
+    if (!auth.isAuthenticated || !auth.expiresAt) {
       stopRefreshTimer();
       return;
     }
 
+    const now = Date.now() / 1000;
+    const timeLeft = auth.expiresAt - now;
+    
+    // Refrescar 2 minutos antes de que expire (120 segundos)
+    const buffer = 120;
+    const delay = Math.max(0, (timeLeft - buffer) * 1000);
+
     stopRefreshTimer();
-    refreshTimerRef.current = setInterval(async () => {
+    refreshTimerRef.current = setTimeout(async () => {
       const ok = await refreshSession();
       if (!ok) {
         await performLogout();
       }
-    }, REFRESH_INTERVAL_MS);
+    }, delay);
 
-    return () => {
-      stopRefreshTimer();
-    };
-  }, [auth.isAuthenticated, performLogout, refreshSession, stopRefreshTimer]);
+    return () => stopRefreshTimer();
+  }, [auth.isAuthenticated, auth.expiresAt, refreshSession, performLogout, stopRefreshTimer]);
 
   useEffect(() => {
     if (!auth.isAuthenticated) {

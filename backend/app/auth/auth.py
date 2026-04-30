@@ -80,20 +80,22 @@ class AuthManager:
         return payload
 
     @staticmethod
-    def create_access_token(data: dict) -> str:
+    def create_access_token(data: dict) -> tuple[str, int]:
         to_encode = data.copy()
         if "id" in to_encode:
             to_encode["sub"] = str(to_encode["id"])
 
-        expire = datetime.now(timezone.utc) + timedelta(minutes=AuthManager.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire_dt = datetime.now(timezone.utc) + timedelta(minutes=AuthManager.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire_ts = int(expire_dt.timestamp())
         to_encode.update(
             {
-                "exp": int(expire.timestamp()),
+                "exp": expire_ts,
                 "type": "access",
                 "rol": normalize_role(to_encode.get("rol")),
             }
         )
-        return jwt.encode(to_encode, AuthManager.SECRET_KEY, algorithm=AuthManager.ALGORITHM)
+        token = jwt.encode(to_encode, AuthManager.SECRET_KEY, algorithm=AuthManager.ALGORITHM)
+        return token, expire_ts
 
     @staticmethod
     def create_refresh_token(user_id: int) -> str:
@@ -166,7 +168,7 @@ class AuthManager:
 
         rol_nombre = normalize_role(user.rol_rel.rol if user.rol_rel else "CLIENTE")
 
-        new_access = AuthManager.create_access_token(
+        new_access, expires_at = AuthManager.create_access_token(
             {
                 "id": user.id,
                 "name": user.nombre,
@@ -186,7 +188,11 @@ class AuthManager:
         )
 
         logger.info("[AuthManager.refresh_access_token] refresh ok user_id=%s rol=%s", user.id, rol_nombre)
-        return {"status": "Access token actualizado", "newToken": new_access}
+        return {
+            "status": "Access token actualizado",
+            "newToken": new_access,
+            "expires_at": expires_at,
+        }
 
     @staticmethod
     def logout(response: Response, request: Request):

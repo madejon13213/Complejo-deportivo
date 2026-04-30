@@ -12,6 +12,8 @@ from app.schemas.reservation_schema import (
     ReservationResponse,
     ReservationSearchResponse,
     ReservationUpdate,
+    ReservationEstimateRequest,
+    ReservationEstimateResponse,
 )
 from app.services.reservation_service import ReservationService
 
@@ -111,6 +113,15 @@ def create_reservation(
         db=db,
         actor_role=actor_role,
     )
+
+
+@router.post("/estimate", response_model=ReservationEstimateResponse, status_code=status.HTTP_200_OK)
+def estimate_reservation_price(
+    data: ReservationEstimateRequest,
+    current_user: Dict[str, Any] = Depends(AuthManager.get_current_user),
+    db: Session = Depends(get_db),
+):
+    return ReservationService.estimate_price(data, db)
 
 
 @router.put("/update/{id}", response_model=ReservationResponse, status_code=status.HTTP_200_OK)

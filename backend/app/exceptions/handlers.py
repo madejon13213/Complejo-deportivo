@@ -28,12 +28,32 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     )
 
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Map of English messages to Spanish equivalents
+    translation_map = {
+        "field required": "campo obligatorio",
+        "value is not a valid email address": "correo no válido",
+        "ensure this value has at least": "asegúrese de que este valor tiene al menos",
+        "ensure this value has at most": "asegúrese de que este valor tiene como máximo",
+        "ensure this value is greater than": "asegúrese de que este valor es mayor que",
+        "ensure this value is greater than or equal to": "asegúrese de que este valor es mayor o igual que",
+        "ensure this value is less than": "asegúrese de que este valor es menor que",
+        "ensure this value is less than or equal to": "asegúrese de que este valor es menor o igual que",
+    }
+
     errors = []
     for error in exc.errors():
-        field = ".".join(str(loc) for loc in error.get("loc", []))
+        # Mensaje original
         msg = error.get("msg", "")
-        errors.append(f"{field}: {msg}")
-    
+        # Elimina prefijo de pydantic como 'value_error,'
+        msg = msg.replace("value_error,", "").strip()
+        # Traduce si corresponde
+        for eng, esp in translation_map.items():
+            if msg.startswith(eng):
+                msg = msg.replace(eng, esp)
+                break
+        errors.append(msg)
+
+
     detail = "Datos de entrada inválidos. " + " | ".join(errors)
     return JSONResponse(
         status_code=422,

@@ -52,5 +52,20 @@ export function createReservation(payload: ReservationCreatePayload) {
 }
 
 export function cancelReservation(reservationId: number) {
-  return apiFetch<{ mensaje?: string }>(`/reservations/delete/${reservationId}`, { method: "DELETE" });
+  return apiFetch<{ mensaje?: string }>(`/reservations/update/${reservationId}`, {
+    method: "PUT",
+    body: JSON.stringify({ estado: "Cancelada" }),
+  });
+}
+
+export function estimateReservationPrice(payload: {
+  hora_inicio: string;
+  hora_fin: string;
+  id_espacio: number;
+  numero_personas?: number;
+}) {
+  return apiFetch<{ precio_estimado: number }>("/reservations/estimate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

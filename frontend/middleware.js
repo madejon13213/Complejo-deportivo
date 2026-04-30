@@ -66,7 +66,7 @@ export async function middleware(request) {
     return NextResponse.next();
   }
 
-  const secret = new TextEncoder().encode(process.env.SECRET_KEY || "tu_clave_secreta");
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY || "tu_clave_secreta_super_segura");
 
   try {
     const { payload } = await jose.jwtVerify(token, secret);
@@ -80,31 +80,40 @@ export async function middleware(request) {
     }
 
     return NextResponse.next();
-  } catch {
-    const newToken = await tryRefresh(request).catch(() => null);
-    if (!newToken) {
-      const response = NextResponse.redirect(new URL("/login", request.url));
-      response.cookies.delete("token");
-      response.cookies.delete("refresh_token");
+  } catch (err) {
+    // Solo intentamos refrescar si es un error de expiración
+    if (err.code === "ERR_JWT_EXPIRED" || err.message?.includes("expired")) {
+      const newToken = await tryRefresh(request).catch(() => null);
+      if (!newToken) {
+        const response = NextResponse.redirect(new URL("/login", request.url));
+        response.cookies.delete("token");
+        response.cookies.delete("refresh_token");
+        return response;
+      }
+
+      const requestHeaders = new Headers(request.headers);
+      const cookieHeader = request.headers.get("cookie") || "";
+      const updatedCookies = cookieHeader.includes("token=")
+        ? cookieHeader.replace(/token=[^;]+/, `token=${newToken}`)
+        : `${cookieHeader}; token=${newToken}`;
+
+      requestHeaders.set("cookie", updatedCookies);
+
+      const response = NextResponse.next({ request: { headers: requestHeaders } });
+      response.cookies.set("token", newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 15 * 60,
+      });
       return response;
     }
 
-    const requestHeaders = new Headers(request.headers);
-    const cookieHeader = request.headers.get("cookie") || "";
-    const updatedCookies = cookieHeader.includes("token=")
-      ? cookieHeader.replace(/token=[^;]+/, `token=${newToken}`)
-      : `${cookieHeader}; token=${newToken}`;
-
-    requestHeaders.set("cookie", updatedCookies);
-
-    const response = NextResponse.next({ request: { headers: requestHeaders } });
-    response.cookies.set("token", newToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 15 * 60,
-    });
+    // Si el token es inválido por otros motivos, no refrescamos, vamos a login
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.delete("token");
+    response.cookies.delete("refresh_token");
     return response;
   }
 }

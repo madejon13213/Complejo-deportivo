@@ -14,7 +14,7 @@ import { ApiError } from "@/lib/api";
 import { CalendarRange, toLocalSlot } from "@/lib/date";
 import { useApiQuery } from "@/lib/hooks/useApiQuery";
 import { getCourts } from "@/lib/services/courts";
-import { createReservation, getReservationsBySpace } from "@/lib/services/reservations";
+import { createReservation, estimateReservationPrice, getReservationsBySpace } from "@/lib/services/reservations";
 import { Court, Reservation } from "@/lib/types";
 
 function overlaps(range: CalendarRange, reservation: Reservation) {
@@ -48,9 +48,9 @@ export default function ReservasPage() {
   const [selectedCourt, setSelectedCourt] = useState<string>("");
   const [selection, setSelection] = useState<CalendarRange | null>(null);
   const [numPersonas, setNumPersonas] = useState("1");
-  const [espaciosReservados, setEspaciosReservados] = useState("1");
   const [feedback, setFeedback] = useState<{ kind: "success" | "error" | "warning" | "info"; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
 
   const courtsQuery = useApiQuery<Court[]>(() => getCourts(), []);
 
@@ -87,7 +87,6 @@ export default function ReservasPage() {
   useEffect(() => {
     setSelection(null);
     setNumPersonas("1");
-    setEspaciosReservados("1");
   }, [selectedCourt]);
 
   const reservations = reservationsQuery.data || [];
@@ -104,7 +103,7 @@ export default function ReservasPage() {
     selection ? getOccupiedUnits(selection, reservations, courtCapacity, allowsPartial) : 0;
 
   const availableUnitsForSelection = Math.max(0, courtCapacity - occupiedUnitsForSelection);
-  const requestedSpaces = Math.max(1, Number(espaciosReservados) || 1);
+  const requestedSpaces = Math.max(1, Number(numPersonas) || 1);
 
   const selectedRangeConflict = selection
     ? allowsPartial
@@ -114,18 +113,33 @@ export default function ReservasPage() {
 
   const canConfirm = Boolean(selection && selectedCourt && numericUserId);
 
-  const previewPrice = useMemo(() => {
-    if (!selection || !selectedCourtDetails) return 0;
-    const hours = Math.max(0, selection.endHour - selection.startHour);
-    if (!hours) return 0;
-
-    if (allowsPartial) {
-      const unit = selectedCourtDetails.precio_hora_parcial || ((selectedCourtDetails.precio_hora || 0) / Math.max(1, courtCapacity));
-      return Number((hours * unit * requestedSpaces).toFixed(2));
+  useEffect(() => {
+    if (!selection || !selectedCourt) {
+      setEstimatedPrice(null);
+      return;
     }
 
-    return Number((hours * (selectedCourtDetails.precio_hora || 0)).toFixed(2));
-  }, [selection, selectedCourtDetails, allowsPartial, courtCapacity, requestedSpaces]);
+    const fetchEstimate = async () => {
+      try {
+        const startSlot = toLocalSlot(selection.date, selection.startHour);
+        const endSlot = toLocalSlot(selection.date, selection.endHour);
+        const res = await estimateReservationPrice({
+          hora_inicio: startSlot.hora,
+          hora_fin: endSlot.hora,
+          id_espacio: Number(selectedCourt),
+          numero_personas: Number(numPersonas) || 1,
+        });
+        if (res && res.precio_estimado !== undefined) {
+          setEstimatedPrice(res.precio_estimado);
+        }
+      } catch (err) {
+        console.error("Error al estimar precio", err);
+        setEstimatedPrice(null);
+      }
+    };
+
+    void fetchEstimate();
+  }, [selection, selectedCourt, numPersonas]);
 
   const onConfirm = async () => {
     if (!selection || !selectedCourt || !numericUserId) {
@@ -135,20 +149,15 @@ export default function ReservasPage() {
 
     if (allowsPartial) {
       const people = Number(numPersonas);
-      const spaces = Number(espaciosReservados);
+      const spaces = people;
 
       if (!Number.isFinite(people) || people <= 0) {
-        setFeedback({ kind: "warning", message: "Indica un numero de personas valido." });
-        return;
-      }
-
-      if (!Number.isFinite(spaces) || spaces <= 0) {
-        setFeedback({ kind: "warning", message: "Indica una cantidad valida de subespacios." });
+        setFeedback({ kind: "warning", message: "Indica un número de personas válido." });
         return;
       }
 
       if (spaces > courtCapacity) {
-        setFeedback({ kind: "warning", message: `No puedes reservar mas de ${courtCapacity} subespacios.` });
+        setFeedback({ kind: "warning", message: `No hay plazas suficientes (máx: ${courtCapacity}).` });
         return;
       }
     }
@@ -208,113 +217,138 @@ export default function ReservasPage() {
       <h1 className="text-4xl font-medium tracking-tight">Reservas</h1>
       {feedback && <Toast kind={feedback.kind} message={feedback.message} />}
 
-      <section className="rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 1</p>
-            <Select
-              label="Seleccion de pista"
-              value={selectedCourt}
-              onChange={(event) => setSelectedCourt(event.target.value)}
-              options={[{ value: "", label: "Selecciona una pista" }, ...courtOptions]}
-            />
-          </div>
+      <div className="grid gap-6 md:grid-cols-12">
+        {/* COLUMNA IZQUIERDA: Controles y Confirmación */}
+        <div className="flex flex-col space-y-6 md:col-span-5 lg:col-span-4">
+          <section className="rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 1</p>
+                <Select
+                  label="Seleccion de pista"
+                  value={selectedCourt}
+                  onChange={(event) => setSelectedCourt(event.target.value)}
+                  options={[{ value: "", label: "Selecciona una pista" }, ...courtOptions]}
+                />
+              </div>
 
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 2</p>
-            <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-200">
-              {!selectedCourt && "Elige primero una pista para ver su horario disponible."}
-              {selectedCourt && reservationsQuery.loading && "Cargando disponibilidad en tiempo real..."}
-              {selectedCourt && !reservationsQuery.loading && "Disponibilidad cargada. Selecciona una o varias horas libres."}
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 2</p>
+                <div className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-200">
+                  {!selectedCourt && "Elige primero una pista para ver su horario disponible."}
+                  {selectedCourt && reservationsQuery.loading && "Cargando disponibilidad en tiempo real..."}
+                  {selectedCourt && !reservationsQuery.loading && "Disponibilidad cargada. Selecciona una o varias horas libres en el calendario."}
+                </div>
+              </div>
+
+              {allowsPartial && selectedCourt && (
+                <div className="space-y-3 pt-2">
+                  <Input
+                    label="Número de personas (plazas)"
+                    type="number"
+                    min="1"
+                    max={String(courtCapacity)}
+                    value={numPersonas}
+                    onChange={(event) => setNumPersonas(event.target.value)}
+                  />
+                  <div className="flex items-center justify-center rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[#ffcc9f] font-medium">
+                    Disponibles en franja: {availableUnitsForSelection} / {courtCapacity}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
+
+          <section className="flex flex-1 flex-col rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 4</p>
+            <h2 className="mt-1 text-xl font-medium">Confirmacion de reserva</h2>
+
+            {!selection && (
+              <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-white/5 bg-black/10 p-4 text-center">
+                <p className="text-sm text-gray-400">Aun no has seleccionado un horario en el calendario (Paso 3).</p>
+              </div>
+            )}
+
+            {selection && (
+              <div className="mt-4 flex flex-1 flex-col justify-center rounded-xl border border-white/10 bg-black/20 p-4">
+                <p className="text-sm text-gray-300">
+                  <span className="font-medium text-white">Pista:</span> #{selectedCourt} <br />
+                  <span className="font-medium text-white">Fecha:</span> {selection.date} <br />
+                  <span className="font-medium text-white">Horario:</span> {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
+                </p>
+                <div className="mt-4 border-t border-white/10 pt-4">
+                  <p className="text-sm text-gray-400">Precio total estimado</p>
+                  <p className="text-3xl font-semibold text-[#ffcc9f]">
+                    {estimatedPrice !== null ? `${estimatedPrice.toFixed(2)} €` : "Calculando..."}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN" && (
+              <div className="mt-3">
+                <Toast kind="error" message="No hay disponibilidad suficiente en la pista seleccionada." />
+              </div>
+            )}
+
+            <div className="mt-6">
+              <Button
+                className="w-full"
+                disabled={
+                  !canConfirm ||
+                  saving ||
+                  (selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN")
+                }
+                onClick={onConfirm}
+              >
+                {saving ? "Confirmando..." : "Confirmar reserva"}
+              </Button>
+            </div>
+          </section>
         </div>
 
-        {allowsPartial && selectedCourt && (
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            <Input
-              label="Numero de personas"
-              type="number"
-              min="1"
-              value={numPersonas}
-              onChange={(event) => setNumPersonas(event.target.value)}
-            />
-            <Input
-              label="Subespacios reservados"
-              type="number"
-              min="1"
-              max={String(courtCapacity)}
-              value={espaciosReservados}
-              onChange={(event) => setEspaciosReservados(event.target.value)}
-            />
-            <div className="flex items-end rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-gray-300">
-              Disponibles en franja: {availableUnitsForSelection}/{courtCapacity}
+        {/* COLUMNA DERECHA: Calendario */}
+        <div className="flex flex-col md:col-span-7 lg:col-span-8">
+          {!selectedCourt ? (
+            <div className="flex h-full min-h-[500px] items-center justify-center rounded-[24px] border border-white/15 bg-white/5 p-8 text-center backdrop-blur-sm">
+              <div className="max-w-md space-y-2">
+                <h3 className="text-xl font-medium">Calendario Semanal</h3>
+                <p className="text-sm text-gray-400">Selecciona una pista en el Paso 1 para visualizar su disponibilidad y reservar tus horas.</p>
+              </div>
             </div>
-          </div>
-        )}
-      </section>
-
-      {!selectedCourt && <Toast kind="info" message="Paso 1: selecciona una pista para desbloquear el horario." />}
-      {selectedCourt && reservationsQuery.error && <Toast kind="error" message={reservationsQuery.error} />}
-
-      {selectedCourt && (
-        <section className="space-y-3 rounded-[24px] border border-white/15 bg-white/5 p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 3: seleccion de horas</p>
-            <Button variant="secondary" onClick={() => reservationsQuery.refetch()}>
-              Refrescar disponibilidad
-            </Button>
-          </div>
-
-          {reservationsQuery.loading ? (
-            <Spinner />
           ) : (
-            <WeeklyCalendar
-              reservations={reservations}
-              role={normalizedRole}
-              userId={numericUserId}
-              courtCapacity={courtCapacity}
-              allowsPartial={allowsPartial}
-              onSelectionChange={(nextRange) => setSelection(nextRange)}
-            />
+            <section className="flex h-full flex-col space-y-4 rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 3: Seleccion de horas</p>
+                <Button variant="secondary" onClick={() => reservationsQuery.refetch()}>
+                  Refrescar disponibilidad
+                </Button>
+              </div>
+
+              {reservationsQuery.error && (
+                <Toast kind="error" message={reservationsQuery.error} />
+              )}
+
+              <div className="flex-1 rounded-xl bg-black/20 p-2">
+                {reservationsQuery.loading ? (
+                  <div className="flex h-full min-h-[400px] items-center justify-center">
+                    <Spinner />
+                  </div>
+                ) : (
+                  <WeeklyCalendar
+                    reservations={reservations}
+                    role={normalizedRole}
+                    userId={numericUserId}
+                    courtCapacity={courtCapacity}
+                    allowsPartial={allowsPartial}
+                    onSelectionChange={(nextRange) => setSelection(nextRange)}
+                  />
+                )}
+              </div>
+            </section>
           )}
-        </section>
-      )}
-
-      <section className="rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
-        <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 4</p>
-        <h2 className="mt-1 text-xl font-medium">Confirmacion de reserva</h2>
-
-        {!selection && <p className="mt-2 text-sm text-gray-300">Aun no has seleccionado un horario.</p>}
-
-        {selection && (
-          <>
-            <p className="mt-2 text-sm text-gray-200">
-              Pista #{selectedCourt} · Dia {selection.date} · {String(selection.startHour).padStart(2, "0")}:00 - {String(selection.endHour).padStart(2, "0")}:00
-            </p>
-            <p className="mt-2 text-base font-semibold text-[#ffcc9f]">Precio total estimado: {previewPrice.toFixed(2)} €</p>
-          </>
-        )}
-
-        {selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN" && (
-          <div className="mt-3">
-            <Toast kind="error" message="No hay disponibilidad suficiente en la pista seleccionada." />
-          </div>
-        )}
-
-        <div className="mt-4">
-          <Button
-            disabled={
-              !canConfirm ||
-              saving ||
-              (selectedRangeConflict && normalizedRole !== "CLUB" && normalizedRole !== "ADMIN")
-            }
-            onClick={onConfirm}
-          >
-            {saving ? "Confirmando..." : "Confirmar reserva"}
-          </Button>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

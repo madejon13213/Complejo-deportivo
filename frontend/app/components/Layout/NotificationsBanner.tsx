@@ -28,7 +28,7 @@ export default function NotificationsBanner() {
             onClick={() => markNotificationAsRead(notification.id)}
             className="!px-3 !py-1 text-xs"
           >
-            Marcar como leída
+            Eliminar
           </Button>
         </div>
       ))}

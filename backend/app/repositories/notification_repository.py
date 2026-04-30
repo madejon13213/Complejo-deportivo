@@ -38,3 +38,16 @@ class NotificationRepository(BaseRepository):
         self.db.add(notification)
         self.db.flush()
         return notification
+
+    def delete(self, notification_id: int, user_id: int) -> Notificacion | None:
+        notification = (
+            self.db.query(Notificacion)
+            .filter(Notificacion.id == notification_id, Notificacion.id_user == user_id)
+            .first()
+        )
+        if not notification:
+            return None
+
+        self.db.delete(notification)
+        self.db.flush()
+        return notification

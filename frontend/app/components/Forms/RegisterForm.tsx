@@ -14,6 +14,7 @@ interface RegisterPayload {
   seg_ape: string;
   email: string;
   password: string;
+  repeat_password: string;
   telefono: string;
   rol: string;
 }
@@ -25,6 +26,7 @@ export default function RegisterForm() {
     seg_ape: "",
     email: "",
     password: "",
+    repeat_password: "",
     telefono: "",
     rol: "CLIENTE",
   });
@@ -40,8 +42,8 @@ export default function RegisterForm() {
     event.preventDefault();
     setError("");
     setSuccess("");
-    if (!acceptTerms) {
-      setError("Debes aceptar los términos.");
+    if (form.password !== form.repeat_password) {
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
@@ -62,6 +64,7 @@ export default function RegisterForm() {
       <Input label="Segundo apellido" value={form.seg_ape} onChange={(e) => update("seg_ape", e.target.value)} />
       <Input label="Email" type="email" icon={<Mail size={16} />} value={form.email} onChange={(e) => update("email", e.target.value)} required />
       <Input label="Contraseña" type="password" value={form.password} onChange={(e) => update("password", e.target.value)} required />
+      <Input label="Repetir contraseña" type="password" value={form.repeat_password} onChange={(e) => update("repeat_password", e.target.value)} required />
       <Input label="Teléfono" icon={<Phone size={16} />} value={form.telefono} onChange={(e) => update("telefono", e.target.value)} />
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} />
