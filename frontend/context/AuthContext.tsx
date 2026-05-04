@@ -9,6 +9,7 @@ import { Notification } from "@/lib/types";
 
 const REFRESH_INTERVAL_MS = 13 * 60 * 1000;
 const NOTIFICATIONS_POLLING_MS = 30 * 1000;
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutos
 
 interface AuthState {
   userId: string | null;
@@ -84,6 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notificationsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const isUnmountedRef = useRef(false);
   const [auth, setAuth] = useState<AuthState>(initialState);
@@ -100,6 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (notificationsTimerRef.current) {
       clearInterval(notificationsTimerRef.current);
       notificationsTimerRef.current = null;
+    }
+  }, []);
+
+  const stopInactivityTimer = useCallback(() => {
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+      inactivityTimerRef.current = null;
     }
   }, []);
 
@@ -166,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const performLogout = useCallback(async () => {
     stopRefreshTimer();
     stopNotificationsTimer();
+    stopInactivityTimer();
     try {
       await fetch("/api/users/logout", { method: "POST", credentials: "include" });
     } finally {
@@ -260,8 +270,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isUnmountedRef.current = true;
       stopRefreshTimer();
       stopNotificationsTimer();
+      stopInactivityTimer();
     };
-  }, [stopRefreshTimer, stopNotificationsTimer]);
+  }, [stopRefreshTimer, stopNotificationsTimer, stopInactivityTimer]);
+
+  // Lógica de inactividad (Auto-logout)
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      stopInactivityTimer();
+      return;
+    }
+
+    const resetTimer = () => {
+      stopInactivityTimer();
+      inactivityTimerRef.current = setTimeout(() => {
+        void performLogout();
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    // Eventos que cuentan como "actividad"
+    const activityEvents = ["mousedown", "mousemove", "keypress", "scroll", "touchstart"];
+    
+    // Configurar listeners
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Iniciar el primer temporizador
+    resetTimer();
+
+    return () => {
+      stopInactivityTimer();
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [auth.isAuthenticated, performLogout, stopInactivityTimer]);
 
   const login = useCallback((payload: LoginPayload) => {
     setAuth(parseRole(payload));

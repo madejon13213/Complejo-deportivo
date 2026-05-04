@@ -18,5 +18,9 @@ redis
 weasyprint
 # Opcional pero recomendado
 jinja2
+
+# Testing
+pytest
+httpx
 pandas
 xlsxwriter

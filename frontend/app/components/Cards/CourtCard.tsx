@@ -5,9 +5,12 @@ import Button from "@/app/components/UI/Button";
 
 interface CourtCardProps {
   court: Court;
+  isAdmin?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export default function CourtCard({ court }: CourtCardProps) {
+export default function CourtCard({ court, isAdmin, onEdit, onDelete }: CourtCardProps) {
   return (
     <article className="rounded-2xl border border-white/15 bg-black/35 p-4 shadow-sm backdrop-blur-sm">
       <div className="mb-3 flex h-32 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white">
@@ -22,15 +25,27 @@ export default function CourtCard({ court }: CourtCardProps) {
           <Users size={14} /> Capacidad: {court.capacidad ?? 0}
         </p>
       </div>
-      <div className="mt-4 flex gap-2">
-        <Link href={`/courts/${court.id}`} className="flex-1">
-          <Button className="w-full" variant="secondary">
-            Ver detalle
-          </Button>
-        </Link>
-        <Link href={`/reservas?courtId=${court.id}`} className="flex-1">
-          <Button className="w-full">Reservar</Button>
-        </Link>
+      <div className="mt-4 space-y-2">
+        <div className="flex gap-2">
+          <Link href={`/courts/${court.id}`} className="flex-1">
+            <Button className="w-full" variant="secondary">
+              Ver detalle
+            </Button>
+          </Link>
+          <Link href={`/reservas?courtId=${court.id}`} className="flex-1">
+            <Button className="w-full">Reservar</Button>
+          </Link>
+        </div>
+        {isAdmin && (
+          <div className="flex gap-2">
+            <Button onClick={onEdit} variant="outline" className="flex-1">
+              Editar
+            </Button>
+            <Button onClick={onDelete} variant="destructive" className="flex-1">
+              Eliminar
+            </Button>
+          </div>
+        )}
       </div>
     </article>
   );

@@ -108,3 +108,47 @@ class CourtService:
                 status_code=500,
                 detail="Error al filtrar espacios por reserva parcial",
             )
+
+    @staticmethod
+    def create_court(court_data: dict, db: Session):
+        repo = CourtRepository(db)
+        try:
+            court = repo.create(court_data)
+            return CourtService._to_response(court)
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Error al crear pista",
+            )
+
+    @staticmethod
+    def update_court(id: int, court_data: dict, db: Session):
+        repo = CourtRepository(db)
+        try:
+            court = repo.update(id, court_data)
+            if not court:
+                raise HTTPException(status_code=404, detail="Pista no encontrada")
+            return CourtService._to_response(court)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Error al actualizar pista",
+            )
+
+    @staticmethod
+    def delete_court(id: int, db: Session):
+        repo = CourtRepository(db)
+        try:
+            success = repo.delete(id)
+            if not success:
+                raise HTTPException(status_code=404, detail="Pista no encontrada")
+            return {"message": "Pista eliminada correctamente"}
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail="Error al eliminar pista",
+            )

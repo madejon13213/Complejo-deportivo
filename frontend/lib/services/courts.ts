@@ -34,3 +34,23 @@ export function getCourtsByType(typeId: number, page: number = 1, limit: number 
     cache: "no-store",
   });
 }
+
+export function createCourt(courtData: Omit<Court, 'id'>) {
+  return apiFetch<Court>('/courts/', {
+    method: 'POST',
+    body: JSON.stringify(courtData),
+  });
+}
+
+export function updateCourt(courtId: number, courtData: Partial<Omit<Court, 'id'>>) {
+  return apiFetch<Court>(`/courts/${courtId}`, {
+    method: 'PUT',
+    body: JSON.stringify(courtData),
+  });
+}
+
+export function deleteCourt(courtId: number) {
+  return apiFetch<void>(`/courts/${courtId}`, {
+    method: 'DELETE',
+  });
+}

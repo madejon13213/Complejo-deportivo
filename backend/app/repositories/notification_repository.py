@@ -39,15 +39,5 @@ class NotificationRepository(BaseRepository):
         self.db.flush()
         return notification
 
-    def delete(self, notification_id: int, user_id: int) -> Notificacion | None:
-        notification = (
-            self.db.query(Notificacion)
-            .filter(Notificacion.id == notification_id, Notificacion.id_user == user_id)
-            .first()
-        )
-        if not notification:
-            return None
-
-        self.db.delete(notification)
-        self.db.flush()
-        return notification
+    def count_unread(self, user_id: int) -> int:
+        return self.db.query(Notificacion).filter(Notificacion.id_user == user_id, Notificacion.leida.is_(False)).count()

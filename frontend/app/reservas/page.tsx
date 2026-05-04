@@ -32,11 +32,23 @@ function getReservationUnits(reservation: Reservation, capacity: number, allowsP
 }
 
 function getOccupiedUnits(range: CalendarRange, reservations: Reservation[], capacity: number, allowsPartial: boolean): number {
-  const occupied = reservations
-    .filter((reservation) => overlaps(range, reservation))
-    .reduce((sum, reservation) => sum + getReservationUnits(reservation, capacity, allowsPartial), 0);
+  let maxOccupied = 0;
 
-  return Math.min(capacity, occupied);
+  for (let hour = range.startHour; hour < range.endHour; hour++) {
+    const unitsInSlot = reservations
+      .filter((res) => {
+        const start = Number(res.hora_inicio.slice(0, 2));
+        const end = Number(res.hora_fin.slice(0, 2));
+        return res.fecha === range.date && res.estado.toLowerCase() !== "cancelada" && start < (hour + 1) && end > hour;
+      })
+      .reduce((sum, res) => sum + getReservationUnits(res, capacity, allowsPartial), 0);
+
+    if (unitsInSlot > maxOccupied) {
+      maxOccupied = unitsInSlot;
+    }
+  }
+
+  return Math.min(capacity, maxOccupied);
 }
 
 export default function ReservasPage() {

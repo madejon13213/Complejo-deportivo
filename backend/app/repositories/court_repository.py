@@ -52,3 +52,29 @@ class CourtRepository(BaseRepository):
 
     def get_by_partial_reservation(self, permite_reserva_parcial: bool) -> list[Espacio]:
         return self.db.query(Espacio).join(TipoEspacio).filter(TipoEspacio.permite_reserva_parcial == permite_reserva_parcial).all()
+
+    def create(self, court_data: dict) -> Espacio:
+        court = Espacio(**court_data)
+        self.db.add(court)
+        self.db.commit()
+        self.db.refresh(court)
+        return court
+
+    def update(self, id: int, court_data: dict) -> Espacio | None:
+        court = self.get_by_id(id)
+        if not court:
+            return None
+        for key, value in court_data.items():
+            if value is not None:
+                setattr(court, key, value)
+        self.db.commit()
+        self.db.refresh(court)
+        return court
+
+    def delete(self, id: int) -> bool:
+        court = self.get_by_id(id)
+        if not court:
+            return False
+        self.db.delete(court)
+        self.db.commit()
+        return True

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Response, status, Request, HTTPEx
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional  
-from app.schemas.court_schema import CourtResponse, CourtSearchResponse
+from app.schemas.court_schema import CourtResponse, CourtSearchResponse, CourtCreate, CourtUpdate
 from app.database import get_db
 from app.auth.auth import AuthManager
 from app.services.court_service import CourtService
@@ -49,5 +49,31 @@ def get_courts_by_partial_reservation(
     db: Session = Depends(get_db)
 ):
     return CourtService.get_courts_by_partial_reservation(permite_reserva_parcial, db)
+
+@router.post("/", response_model=CourtResponse, status_code=status.HTTP_201_CREATED)
+def create_court(
+    court: CourtCreate,
+    current_admin: Dict[str, Any] = Depends(AuthManager.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return CourtService.create_court(court.model_dump(), db)
+
+@router.put("/{id}", response_model=CourtResponse, status_code=status.HTTP_200_OK)
+def update_court(
+    id: int,
+    court: CourtUpdate,
+    current_admin: Dict[str, Any] = Depends(AuthManager.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    return CourtService.update_court(id, court.model_dump(exclude_unset=True), db)
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_court(
+    id: int,
+    current_admin: Dict[str, Any] = Depends(AuthManager.get_current_admin),
+    db: Session = Depends(get_db)
+):
+    CourtService.delete_court(id, db)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

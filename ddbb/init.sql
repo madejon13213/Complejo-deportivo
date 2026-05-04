@@ -96,8 +96,8 @@ ON CONFLICT (id) DO UPDATE SET permite_reserva_parcial = EXCLUDED.permite_reserv
 INSERT INTO espacio (nombre, precio_hora, capacidad, precio_hora_parcial, id_tipo_espacio)
 VALUES
 -- PISTAS DE ATLETISMO (Con reserva parcial/por calles)
-('Pista Atletismo Exterior - Calle 1', 15.00, 10, 2.50, 1),
-('Pista Atletismo Exterior - Calle 2', 15.00, 10, 2.50, 1),
+('Pista de Atletismo Principal', 20.00, 8, 2.50, 1),
+('Pista de Atletismo Secundaria', 20.00, 8, 2.50, 1),
 
 -- FRONTÓN
 ('Frontón Municipal 1', 12.00, 4, NULL, 2),
@@ -120,7 +120,8 @@ VALUES
 -- 5. RESERVAS
 INSERT INTO reserva (fecha, hora_inicio, hora_fin, estado, plazas_parciales, tipo_reserva, id_user, id_espacio)
 VALUES
-('2026-05-10', '10:00:00', '11:30:00', 'Pendiente', NULL, 'Completa', 2, 1),
+('2026-05-10', '10:00:00', '11:00:00', 'Pendiente', 1, 'Parcial', 2, 1), -- Reserva de 1 calle
+('2026-05-10', '10:00:00', '11:00:00', 'Pendiente', 2, 'Parcial', 2, 1), -- Otra reserva de 2 calles (Total 3/8)
 ('2026-05-12', '09:00:00', '11:00:00', 'Pendiente', 3, 'Parcial', 2, 2),
 ('2026-03-01', '18:00:00', '20:00:00', 'Finalizada', NULL, 'Completa', 2, 3)
 ON CONFLICT DO NOTHING;

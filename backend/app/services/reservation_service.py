@@ -428,10 +428,25 @@ class ReservationService:
                 hora_fin=reservation_data.hora_fin,
             )
 
-            occupied_units = 0
-            for conflict in conflicts:
-                occupied_units += ReservationService._reservation_units(conflict, capacity, allows_partial)
-            available_units = max(0, capacity - occupied_units)
+            # Cálculo de ocupación por tramos horarios (horas completas)
+            max_occupied_units = 0
+            current_h = reservation_data.hora_inicio.hour
+            end_h = reservation_data.hora_fin.hour
+            
+            while current_h < end_h:
+                units_in_slot = 0
+                for conflict in conflicts:
+                    c_start = conflict.hora_inicio.hour
+                    c_end = conflict.hora_fin.hour
+                    # Si el conflicto solapa con esta hora específica
+                    if c_start < (current_h + 1) and c_end > current_h:
+                        units_in_slot += ReservationService._reservation_units(conflict, capacity, allows_partial)
+                
+                if units_in_slot > max_occupied_units:
+                    max_occupied_units = units_in_slot
+                current_h += 1
+
+            available_units = max(0, capacity - max_occupied_units)
 
             if requested_units > available_units:
                 logger.info(
