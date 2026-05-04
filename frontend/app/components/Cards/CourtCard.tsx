@@ -38,10 +38,10 @@ export default function CourtCard({ court, isAdmin, onEdit, onDelete }: CourtCar
         </div>
         {isAdmin && (
           <div className="flex gap-2">
-            <Button onClick={onEdit} variant="outline" className="flex-1">
+            <Button onClick={onEdit} variant="secondary" className="flex-1">
               Editar
             </Button>
-            <Button onClick={onDelete} variant="destructive" className="flex-1">
+            <Button onClick={onDelete} variant="danger" className="flex-1">
               Eliminar
             </Button>
           </div>

@@ -14,13 +14,7 @@ email-validator
 python-dotenv
 # Cache
 redis
-# PDF
-weasyprint
-# Opcional pero recomendado
-jinja2
 
 # Testing
 pytest
 httpx
-pandas
-xlsxwriter

@@ -9,7 +9,8 @@ export interface CalendarRange {
 
 export function getWeekDays(baseDate: Date): Date[] {
   const date = new Date(baseDate);
-  const day = date.getDay();
+  const day = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  // Convert to Monday as first day (if Sunday (0), go back 6 days; otherwise go back (day - 1) days)
   const mondayOffset = day === 0 ? -6 : 1 - day;
   date.setDate(date.getDate() + mondayOffset);
   date.setHours(0, 0, 0, 0);
@@ -26,7 +27,10 @@ export function getHoursRange(): number[] {
 }
 
 export function toIsoDate(date: Date): string {
-  return date.toISOString().split("T")[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export function toLocalSlot(dateIso: string, hour: number) {

@@ -150,13 +150,13 @@ export default function CourtsPage() {
   const items = courtsQuery.data?.items || [];
 
   return (
-    <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-8">
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-white">Pistas disponibles</h1>
         {isAdmin && (
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            className="rounded-lg bg-[#5c7bff] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
           >
             Crear Pista
           </button>
@@ -188,7 +188,7 @@ export default function CourtsPage() {
         </div>
 
         {!courtsQuery.loading && items.length === 0 && (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center">
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-8 text-center backdrop-blur-sm">
             <p className="text-gray-300 text-lg font-medium">No se encontraron pistas que coincidan con tu búsqueda.</p>
             <p className="text-gray-500 text-sm mt-1">Prueba a ajustar los filtros o limpiar el buscador.</p>
           </div>
@@ -248,9 +248,9 @@ function CourtModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-        <h2 className="text-xl font-bold text-white mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-900/95 p-6 shadow-xl">
+        <h2 className="mb-4 text-xl font-bold text-white">
           {isEditing ? "Editar Pista" : "Crear Pista"}
         </h2>
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }}>
@@ -260,7 +260,7 @@ function CourtModal({
               placeholder="Nombre"
               value={formData.nombre}
               onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-              className="w-full p-2 bg-gray-700 text-white rounded"
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder-gray-400 focus:border-[#5c7bff] focus:outline-none"
               required
             />
             <input
@@ -269,7 +269,7 @@ function CourtModal({
               placeholder="Precio por hora"
               value={formData.precio_hora}
               onChange={(e) => setFormData({ ...formData, precio_hora: e.target.value })}
-              className="w-full p-2 bg-gray-700 text-white rounded"
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder-gray-400 focus:border-[#5c7bff] focus:outline-none"
               required
             />
             <input
@@ -277,7 +277,7 @@ function CourtModal({
               placeholder="Capacidad"
               value={formData.capacidad}
               onChange={(e) => setFormData({ ...formData, capacidad: e.target.value })}
-              className="w-full p-2 bg-gray-700 text-white rounded"
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder-gray-400 focus:border-[#5c7bff] focus:outline-none"
               required
             />
             <input
@@ -286,27 +286,27 @@ function CourtModal({
               placeholder="Precio por hora parcial (opcional)"
               value={formData.precio_hora_parcial}
               onChange={(e) => setFormData({ ...formData, precio_hora_parcial: e.target.value })}
-              className="w-full p-2 bg-gray-700 text-white rounded"
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder-gray-400 focus:border-[#5c7bff] focus:outline-none"
             />
             <select
               value={formData.id_tipo_espacio}
               onChange={(e) => setFormData({ ...formData, id_tipo_espacio: e.target.value })}
-              className="w-full p-2 bg-gray-700 text-white rounded"
+              className="w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-sm text-white focus:border-[#5c7bff] focus:outline-none"
               required
             >
-              <option value="">Seleccionar tipo de espacio</option>
+              <option value="" className="bg-zinc-900">Seleccionar tipo de espacio</option>
               {spaceTypes.map((type) => (
-                <option key={type.id} value={type.id}>
+                <option key={type.id} value={type.id} className="bg-zinc-900">
                   {type.tipo}
                 </option>
               ))}
             </select>
           </div>
-          <div className="flex gap-2 mt-6">
-            <button type="button" onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+          <div className="mt-6 flex gap-2">
+            <button type="button" onClick={onClose} className="flex-1 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
               Cancelar
             </button>
-            <button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+            <button type="submit" className="flex-1 rounded-lg bg-[#5c7bff] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110">
               {isEditing ? "Actualizar" : "Crear"}
             </button>
           </div>
@@ -331,17 +331,17 @@ function DeleteModal({
   if (!isOpen || !court) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
-        <h2 className="text-xl font-bold text-white mb-4">Eliminar Pista</h2>
-        <p className="text-gray-300 mb-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-zinc-900/95 p-6 shadow-xl">
+        <h2 className="mb-4 text-xl font-bold text-white">Eliminar Pista</h2>
+        <p className="mb-6 text-gray-300">
           ¿Estás seguro de que quieres eliminar la pista "{court.nombre}"? Esta acción no se puede deshacer.
         </p>
         <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded">
+          <button onClick={onClose} className="flex-1 rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10">
             Cancelar
           </button>
-          <button onClick={onConfirm} className="flex-1 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">
+          <button onClick={onConfirm} className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700">
             Eliminar
           </button>
         </div>

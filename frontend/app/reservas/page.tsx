@@ -238,7 +238,7 @@ export default function ReservasPage() {
               <div className="space-y-2">
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 1</p>
                 <Select
-                  label="Seleccion de pista"
+                  label="Selección de pista"
                   value={selectedCourt}
                   onChange={(event) => setSelectedCourt(event.target.value)}
                   options={[{ value: "", label: "Selecciona una pista" }, ...courtOptions]}
@@ -272,9 +272,9 @@ export default function ReservasPage() {
             </div>
           </section>
 
-          <section className="flex flex-1 flex-col rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+          <section className="flex flex-col rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 4</p>
-            <h2 className="mt-1 text-xl font-medium">Confirmacion de reserva</h2>
+            <h2 className="mt-1 text-xl font-medium">Confirmación de reserva</h2>
 
             {!selection && (
               <div className="mt-4 flex flex-1 items-center justify-center rounded-xl border border-white/5 bg-black/10 p-4 text-center">
@@ -323,16 +323,16 @@ export default function ReservasPage() {
         {/* COLUMNA DERECHA: Calendario */}
         <div className="flex flex-col md:col-span-7 lg:col-span-8">
           {!selectedCourt ? (
-            <div className="flex h-full min-h-[500px] items-center justify-center rounded-[24px] border border-white/15 bg-white/5 p-8 text-center backdrop-blur-sm">
+            <section className="flex h-full min-h-[500px] items-center justify-center rounded-[24px] border border-white/15 bg-white/5 p-8 text-center backdrop-blur-sm">
               <div className="max-w-md space-y-2">
                 <h3 className="text-xl font-medium">Calendario Semanal</h3>
                 <p className="text-sm text-gray-400">Selecciona una pista en el Paso 1 para visualizar su disponibilidad y reservar tus horas.</p>
               </div>
-            </div>
+            </section>
           ) : (
             <section className="flex h-full flex-col space-y-4 rounded-[24px] border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
               <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 3: Seleccion de horas</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-400">Paso 3: Selección de horas</p>
                 <Button variant="secondary" onClick={() => reservationsQuery.refetch()}>
                   Refrescar disponibilidad
                 </Button>
